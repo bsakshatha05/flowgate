@@ -2,7 +2,7 @@
 const path = require('path');
 const fs = require('fs');
 const { DatabaseSync } = require('node:sqlite');
-const { ZONES, GATES, COHORTS, AREAS, DEPARTMENTS, INSTITUTIONS } = require('./config');
+const { ZONES, GATES, COHORTS, AREAS, DEPARTMENTS, ALL_DEPARTMENTS, INSTITUTIONS } = require('./config');
 const { runOptimizer } = require('./optimizer');
 
 const DATA_DIR = path.join(__dirname, '..', 'data');
@@ -187,7 +187,11 @@ function userWindow(u) {
   const schedule = getSetting('schedule');
   const a = schedule?.entry.find((e) => e.cohort === u.cohort);
   const x = schedule?.exit.find((e) => e.cohort === u.cohort);
-  return a ? { start: a.startLabel, end: a.endLabel, exitStart: x?.startLabel, exitEnd: x?.endLabel, label: `${u.cohort} slot` } : { start: '08:30', end: '08:50', label: 'Default' };
+  // A cohort with no optimised slot: a teach-out branch, or a timetable row that
+  // was never imported. Give them a sane window and say plainly why it is generic,
+  // rather than showing "Default" and leaving them to guess.
+  return a ? { start: a.startLabel, end: a.endLabel, exitStart: x?.startLabel, exitEnd: x?.endLabel, label: `${u.cohort} slot` }
+           : { start: '08:30', end: '08:50', label: `${u.cohort} is not in the timetable, so this is a general window` };
 }
 
 function zoneOccupancy() {
@@ -345,7 +349,7 @@ function addPerson(p) {
   const area = AREAS.includes(p.area) ? p.area : AREAS[0];
   // Department and year only mean something for the engineering college, because
   // that is the only one whose cohorts the optimizer schedules.
-  const dept = isEng ? (DEPARTMENTS.includes(p.dept) ? p.dept : DEPARTMENTS[0]) : null;
+  const dept = isEng ? (ALL_DEPARTMENTS.includes(p.dept) ? p.dept : DEPARTMENTS[0]) : null;
   const year = isEng && role === 'student' ? Math.min(4, Math.max(1, Number(p.year) || 1)) : null;
   const cohort = isEng ? (role === 'student' ? `${dept}-Y${year}` : 'FACULTY') : inst.id;
 

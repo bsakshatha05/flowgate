@@ -63,6 +63,7 @@ If a judge pushes on the numbers, say plainly: one entrance, one morning, 5.8 mi
 - **Slot Optimizer**: "The red spike is today; the green steps are our slots, always under the gate-capacity line. Paste the real timetable here and click Apply; every student's slot updates instantly."
 
 ## Likely judge questions
+- **What about ISE, you have left it out?** ISE, EIE and AI&DS take no fresh intake in RNSIT's Oct 2025 AICTE disclosure, so they build no new cohort in the model. Their existing second, third and fourth years are still on campus though, so the model understates demand by roughly 500 students, and you can still add those students in the app. Our figures are conservative, not complete.
 - **What if someone joins a carpool and then changes their mind?** They tap Leave this carpool. They get their own parking back and lose the 10 points for sharing, because the sharing did not happen.
 - **What if the driver pulls out?** They tap Withdraw this offer. Every rider is released and told to make their own way, and the driver loses the priority bay and the 5 points. The app will not let a driver quietly disappear on people who are counting on them.
 - **What if someone said car and turns up on a bike?** There is a "coming by something else today" switch in the app. It changes only that day, their registered vehicle stays as it is, and it re-books them into the right kind of space. If they are driving a carpool it refuses until they withdraw, because riders depend on that car.

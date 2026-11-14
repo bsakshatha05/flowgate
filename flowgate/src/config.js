@@ -45,7 +45,15 @@ const ZONES = [
   { id: 'ZBUS', name: 'Bus Bay', type: 'BUS', capacity: 25, gate: 'G3' },
 ];
 
+// Branches with fresh intake. These build the simulated cohorts.
 const DEPARTMENTS = ['CSE', 'ECE', 'EEE', 'ME', 'CV', 'AIML', 'CSD', 'CY'];
+
+// [AICTE] Branches the Oct 2025 disclosure shows at an intake of 00. That means no
+// new admissions, NOT that the branch is empty: the students already in years 2 to 4
+// are on campus every morning until they graduate. So they can be added as real
+// people, even though they add no new cohort to the model.
+const TEACH_OUT_DEPARTMENTS = ['ISE', 'EIE', 'AIDS'];
+const ALL_DEPARTMENTS = [...DEPARTMENTS, ...TEACH_OUT_DEPARTMENTS];
 
 // Cohorts = department + year, with first class start and last class end.
 // headcount is students in that cohort.
@@ -195,6 +203,6 @@ const AREAS = [
 ];
 
 module.exports = {
-  CAMPUS, GATES, LANE_SPLIT, ZONES, DEPARTMENTS, COHORTS, MODE_SHARE, FACULTY, BUS_FLEET, SEATS_PER_BUS, AREAS,
+  CAMPUS, GATES, LANE_SPLIT, ZONES, DEPARTMENTS, TEACH_OUT_DEPARTMENTS, ALL_DEPARTMENTS, COHORTS, MODE_SHARE, FACULTY, BUS_FLEET, SEATS_PER_BUS, AREAS,
   ARRIVAL_SPREAD_MIN, DAILY_ATTENDANCE, INSTITUTIONS, DROPOFF_GATE_COST,
 };

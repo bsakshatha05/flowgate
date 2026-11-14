@@ -351,7 +351,9 @@ $('#pVehicle')?.addEventListener('click', (e) => {
 });
 
 function fillPersonOptions() {
-  $('#pDept').innerHTML = (CFG.depts || []).map((d) => `<option>${d}</option>`).join('');
+  // Teach-out branches are marked, so nobody wonders why they take no new intake.
+  const out = CFG.teachOut || [];
+  $('#pDept').innerHTML = (CFG.depts || []).map((d) => `<option value="${d}">${d}${out.includes(d) ? ' (final years only)' : ''}</option>`).join('');
   $('#pArea').innerHTML = (CFG.areas || []).map((a) => `<option>${a}</option>`).join('');
   $('#pInst').innerHTML = (CFG.institutions || []).map((i) => `<option value="${i.id}">${esc(i.name)}</option>`).join('');
   syncPersonForm();

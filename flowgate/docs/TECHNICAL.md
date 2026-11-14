@@ -143,6 +143,7 @@ It posts with `source: "simulated"`, so the dashboard labels it **Simulated feed
 | Mode share, faculty, buses | `src/config.js` | |
 | Normal and stress day | `src/simulator.js` → `DAYS`, `RAIN` | |
 | Marshal lane and forecast thresholds | `src/simulator.js` → `MARSHAL`, `PREDICT` | |
+| Teach-out branches | `src/config.js` → `TEACH_OUT_DEPARTMENTS` | ISE, EIE and AI&DS show 00 intake in the Oct 2025 disclosure. They build no cohort, so the simulation does **not** count their remaining years 2 to 4. That understates campus demand by roughly 500 students. They can still be added as real people, because they are really there. |
 | Carpool and vehicle changes | `src/db.js` → `leaveCarpool`, `withdrawCarpool`, `setVehicleToday` | Every carpool state has a way out. `users.vehicle_today` plus `vehicle_today_date` override the registered vehicle for one day only; `vehicleOf()` is what booking and zone choice actually read. |
 | Demo people and plates | `src/db.js` → `seed()` | All fictional. Plates use `KA 00`, not a real RTO code. To add or import real people, use **Control Room → People** rather than editing this; anyone added there is kept across a reset (`users.added = 1`). A person belongs to one of the six `INSTITUTIONS` (`users.institution`). Only `RNSIT` people get an optimised slot; everyone else inherits their institution's fixed bell via `userWindow()`. |
 
