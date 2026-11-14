@@ -51,6 +51,14 @@ Open `docs/measured/README.md` or the measured slide.
 
 If a judge pushes on the numbers, say plainly: one entrance, one morning, 5.8 minutes; it does not replace the modelled 53 a minute, which is the whole campus, every institution, arriving at the one vehicle gate. Point them at `docs/measured/`, where the limits are written down, including why we do not quote a pedestrian figure.
 
+## 5b. Adding people (20 s, optional but it lands well)
+
+- **Control Room → People**. Type a judge's name, pick a department, **Add person**.
+- Switch to the Student App and pick them from the list: they have a slot, they can book, they get a pass.
+- Change **Institution** to the school: the form drops the department and year, and says "arrives for the 08:00 start, FlowGate does not move this one, it works around it."
+- "That is the honest boundary of the system. We stagger the college, because that is the timetable we control. The school, the PU college and the degree college keep their own bells, and FlowGate plans around them."
+- "A college would not type its roster in. Each institution exports its list once and imports the CSV here. This form is for the stragglers."
+
 ## 6. The optimizer (30 s)
 - **Slot Optimizer**: "The red spike is today; the green steps are our slots, always under the gate-capacity line. Paste the real timetable here and click Apply; every student's slot updates instantly."
 

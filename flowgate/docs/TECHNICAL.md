@@ -143,7 +143,7 @@ It posts with `source: "simulated"`, so the dashboard labels it **Simulated feed
 | Mode share, faculty, buses | `src/config.js` | |
 | Normal and stress day | `src/simulator.js` → `DAYS`, `RAIN` | |
 | Marshal lane and forecast thresholds | `src/simulator.js` → `MARSHAL`, `PREDICT` | |
-| Demo people and plates | `src/db.js` → `seed()` | All fictional. Plates use `KA 00`, not a real RTO code. |
+| Demo people and plates | `src/db.js` → `seed()` | All fictional. Plates use `KA 00`, not a real RTO code. To add or import real people, use **Control Room → People** rather than editing this; anyone added there is kept across a reset (`users.added = 1`). A person belongs to one of the six `INSTITUTIONS` (`users.institution`). Only `RNSIT` people get an optimised slot; everyone else inherits their institution's fixed bell via `userWindow()`. |
 
 After changing any of these, restart with `node server.js --reset`.
 

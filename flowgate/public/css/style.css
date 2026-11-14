@@ -273,6 +273,7 @@ a.feature:hover b { color: var(--brand); }
 .seg button {
   border: 0; cursor: pointer; padding: 10px 20px; border-radius: 9px;
   font: inherit; font-weight: 600; font-size: .95rem; color: var(--muted); background: transparent;
+  white-space: nowrap;
   transition: background .12s, color .12s;
 }
 .seg button.on { background: var(--brand); color: #fff; box-shadow: var(--shadow); }

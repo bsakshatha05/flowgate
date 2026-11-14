@@ -13,6 +13,7 @@
         <button class="tab active" data-tab="live">Live Ops</button>
         <button class="tab" data-tab="sim">Peak-Hour Simulation</button>
         <button class="tab" data-tab="opt">Slot Optimizer</button>
+        <button class="tab" data-tab="people">People</button>
       </div>
       <div class="auto row small muted" style="gap:6px">
         Demo clock <input id="demoTime" class="mono" style="width:80px" placeholder="live" />
@@ -186,6 +187,64 @@
       <div class="grid g2">
         <div class="card"><h2>Entry slots</h2><div class="fixed-table" style="height:320px;margin-top:10px"><table><thead><tr><th>Slot</th><th>Cohort</th><th>Vehicles</th></tr></thead><tbody id="entryTbl"></tbody></table></div></div>
         <div class="card"><h2>Suggested exit (dismissal) slots</h2><div class="fixed-table" style="height:320px;margin-top:10px"><table><thead><tr><th>Slot</th><th>Cohort</th><th>Vehicles</th></tr></thead><tbody id="exitTbl"></tbody></table></div></div>
+      </div>
+    </section>
+
+    <section id="tab-people" class="grid hidden">
+      <div class="grid g2">
+        <div class="card">
+          <h2>Add a person</h2>
+          <p class="small muted" style="margin:6px 0 14px">They appear straight away in the Student App and the Gate Scanner, and they are kept when you reset the demo data.</p>
+          <form id="personForm" class="grid" style="gap:12px">
+            <div><label for="pName">Name</label><input id="pName" required placeholder="Priya Shenoy" autocomplete="off"></div>
+            <div><label for="pInst">Institution</label><select id="pInst"></select>
+              <p class="small muted" id="pInstHint" style="margin:6px 2px 0"></p></div>
+            <div class="grid" style="gap:12px">
+              <div><span class="lbl">Role</span>
+                <div class="seg" id="pRole" role="radiogroup" aria-label="Role">
+                  <button type="button" role="radio" aria-checked="true" data-role="student" class="on">Student</button>
+                  <button type="button" role="radio" aria-checked="false" data-role="faculty">Faculty</button>
+                </div>
+              </div>
+              <div><span class="lbl">Vehicle</span>
+                <div class="seg" id="pVehicle" role="radiogroup" aria-label="Vehicle">
+                  <button type="button" role="radio" aria-checked="true" data-vehicle="2W" class="on">Two-wheeler</button>
+                  <button type="button" role="radio" aria-checked="false" data-vehicle="4W">Car</button>
+                  <button type="button" role="radio" aria-checked="false" data-vehicle="NONE">Walks</button>
+                </div>
+              </div>
+            </div>
+            <div class="grid g3" style="gap:12px">
+              <div id="pDeptWrap"><label for="pDept">Department</label><select id="pDept"></select></div>
+              <div id="pYearWrap"><label for="pYear">Year</label><select id="pYear"><option>1</option><option>2</option><option>3</option><option>4</option></select></div>
+              <div><label for="pArea">Lives in</label><select id="pArea"></select></div>
+            </div>
+            <button class="btn" type="submit">Add person</button>
+          </form>
+
+          <details class="more" style="margin-top:16px">
+            <summary>Load a whole roster<span class="sum-right">CSV</span></summary>
+            <div class="more-body">
+              <p class="small muted" style="margin:0 0 8px">One row per person: <code>name,institution,role,dept,year,vehicle,area</code>. A header row is optional. Institution is one of <code>RNSIT, PG, SCHOOL_SR, SCHOOL_JR, PUC, DEGREE</code>; leave it blank for the engineering college. Department and year only apply to RNSIT. This is how each institution would load its real list.</p>
+              <input type="file" id="peopleFile" accept=".csv,text/csv">
+              <textarea id="peopleCsv" rows="6" style="margin-top:8px" placeholder="Priya Shenoy,RNSIT,student,AIML,2,4W,Kengeri&#10;Arjun Rao,SCHOOL_SR,student,,,4W,RR Nagar"></textarea>
+              <button class="btn secondary block" id="importPeople" style="margin-top:8px">Import</button>
+              <p class="small muted" id="importMsg" style="margin:8px 2px 0"></p>
+            </div>
+          </details>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h2>People you added</h2><span class="pill" id="addedCount">none</span></div>
+          <p class="small muted" style="margin:6px 0 10px">The 60 demo people are not listed here. They cannot be removed, because the demo depends on them.</p>
+          <div class="fixed-table" style="height:380px">
+            <table>
+              <thead><tr><th>Name</th><th>ID</th><th>Where</th><th>Vehicle</th><th></th></tr></thead>
+              <tbody id="addedTbl"></tbody>
+            </table>
+          </div>
+          <button class="btn secondary block" id="clearAdded" style="margin-top:12px">Remove everyone I added</button>
+        </div>
       </div>
     </section>
   </main>

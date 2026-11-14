@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const store = require('./src/db');
-const { GATES, ZONES, COHORTS, CAMPUS } = require('./src/config');
+const { GATES, ZONES, COHORTS, CAMPUS, DEPARTMENTS, AREAS, INSTITUTIONS } = require('./src/config');
 const { runOptimizer } = require('./src/optimizer');
 const { Simulator, compare, COMPLIANCE, DAYS } = require('./src/simulator');
 const copilot = require('./src/copilot');
@@ -91,9 +91,16 @@ function serveStatic(req, res, pathname) {
 
 // ---------- routes ----------
 const routes = {
-  'GET /api/config': () => ({ campus: CAMPUS, gates: GATES, zones: ZONES, compliance: COMPLIANCE, demoTime: store.getSetting('demoTime') }),
+  'GET /api/config': () => ({ campus: CAMPUS, gates: GATES, zones: ZONES, compliance: COMPLIANCE, depts: DEPARTMENTS, areas: AREAS, demoTime: store.getSetting('demoTime'),
+    institutions: INSTITUTIONS.map((i) => ({ id: i.id, name: i.name, arrive: i.arrive, kind: i.kind })) }),
   'POST /api/admin/demo-time': (q, b) => { store.setSetting('demoTime', /^\d{2}:\d{2}$/.test(b.time || '') ? b.time : null); store.syncClock(); return { demoTime: store.getSetting('demoTime') }; },
   'GET /api/users': () => store.users(),
+  // Managing people from the control room. In a real deployment the college
+  // imports its roster once; the single-person form covers everything after that.
+  'POST /api/admin/people': (q, b) => { const u = store.addPerson(b); pushLive(); return { ok: true, person: u }; },
+  'POST /api/admin/people/import': (q, b) => { const r = store.importPeople(b.csv); pushLive(); return r; },
+  'POST /api/admin/people/remove': (q, b) => { const r = store.removePerson(b.id); pushLive(); return r; },
+  'POST /api/admin/people/clear': () => { const r = store.clearAddedPeople(); pushLive(); return r; },
   'GET /api/me': (q) => store.me(Number(q.get('userId'))) || { error: 'Unknown user' },
   'POST /api/bookings': (q, b) => { const r = store.createBooking(Number(b.userId)); pushLive(); return r; },
   'POST /api/bookings/cancel': (q, b) => { store.cancelBooking(Number(b.id)); pushLive(); return { ok: true }; },

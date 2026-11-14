@@ -2,7 +2,7 @@
 const path = require('path');
 const fs = require('fs');
 const { DatabaseSync } = require('node:sqlite');
-const { ZONES, GATES, COHORTS, AREAS, DEPARTMENTS } = require('./config');
+const { ZONES, GATES, COHORTS, AREAS, DEPARTMENTS, INSTITUTIONS } = require('./config');
 const { runOptimizer } = require('./optimizer');
 
 const DATA_DIR = path.join(__dirname, '..', 'data');
@@ -14,7 +14,11 @@ let db;
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY, name TEXT, usn TEXT, role TEXT, dept TEXT, year INTEGER,
-  area TEXT, vehicle TEXT, cohort TEXT
+  area TEXT, vehicle TEXT, cohort TEXT, institution TEXT,
+  -- 1 for anyone added through the control room rather than the demo seed. Reset
+  -- keeps these: losing a person you added live, mid-demo, would be the worst
+  -- possible moment to find that out.
+  added INTEGER DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS bookings (
   id INTEGER PRIMARY KEY, user_id INTEGER, date TEXT, vehicle TEXT, zone_id TEXT, gate_id TEXT,
@@ -82,8 +86,12 @@ const FIRST = ['Aarav', 'Ananya', 'Rohan', 'Diya', 'Karthik', 'Meera', 'Vikram',
 const LAST = ['Rao', 'Sharma', 'Gowda', 'Iyer', 'Reddy', 'Nair', 'Hegde', 'Shetty', 'Kulkarni', 'Patil', 'Bhat', 'Murthy'];
 
 function seed() {
+  // Everyone added through the control room is carried across a reset. Their
+  // bookings and credits are not: a reset is meant to give a clean morning, and
+  // they can book again in one tap.
+  const kept = db.prepare('SELECT * FROM users WHERE added = 1 ORDER BY id').all();
   db.exec('DELETE FROM users; DELETE FROM bookings; DELETE FROM carpools; DELETE FROM carpool_members; DELETE FROM events; DELETE FROM settings; DELETE FROM credits;');
-  const ins = db.prepare('INSERT INTO users(id, name, usn, role, dept, year, area, vehicle, cohort) VALUES (?,?,?,?,?,?,?,?,?)');
+  const ins = db.prepare("INSERT INTO users(id, name, usn, role, dept, year, area, vehicle, cohort, institution) VALUES (?,?,?,?,?,?,?,?,?,?)");
   let id = 1;
   // 48 students
   for (let i = 0; i < 48; i++) {
@@ -91,13 +99,18 @@ function seed() {
     const year = (i % 4) + 1;
     const vehicle = i % 7 === 0 ? '4W' : i % 3 === 0 ? 'NONE' : '2W';
     const usn = `1RN${String(24 - year).padStart(2, '0')}${dept.slice(0, 2)}${String(100 + i).slice(-3)}`;
-    ins.run(id++, `${FIRST[i % FIRST.length]} ${LAST[(i * 5 + Math.floor(i / FIRST.length)) % LAST.length]}`, usn, 'student', dept, year, AREAS[i % AREAS.length], vehicle, `${dept}-Y${year}`);
+    ins.run(id++, `${FIRST[i % FIRST.length]} ${LAST[(i * 5 + Math.floor(i / FIRST.length)) % LAST.length]}`, usn, 'student', dept, year, AREAS[i % AREAS.length], vehicle, `${dept}-Y${year}`, 'RNSIT');
   }
   // 12 faculty
   for (let i = 0; i < 12; i++) {
     const dept = DEPARTMENTS[i % DEPARTMENTS.length];
-    ins.run(id++, `Dr. ${FIRST[(i * 3 + 5) % FIRST.length]} ${LAST[(i * 7 + 2) % LAST.length]}`, `FAC${100 + i}`, 'faculty', dept, null, AREAS[(i * 3) % AREAS.length], i % 3 === 2 ? '2W' : '4W', 'FACULTY');
+    ins.run(id++, `Dr. ${FIRST[(i * 3 + 5) % FIRST.length]} ${LAST[(i * 7 + 2) % LAST.length]}`, `FAC${100 + i}`, 'faculty', dept, null, AREAS[(i * 3) % AREAS.length], i % 3 === 2 ? '2W' : '4W', 'FACULTY', 'RNSIT');
   }
+
+  // put the kept people back, after the seeded ones so ids never collide
+  const insKept = db.prepare(`INSERT INTO users(id, name, usn, role, dept, year, area, vehicle, cohort, institution, added)
+    VALUES (?,?,?,?,?,?,?,?,?,?,1)`);
+  for (const k of kept) insKept.run(id++, k.name, k.usn, k.role, k.dept, k.year, k.area, k.vehicle, k.cohort, k.institution || 'RNSIT');
 
   // fictional number plates ("KA 00" is not a real RTO code) for hands-free entry demos
   db.prepare("UPDATE users SET plate = 'KA00FG' || (1000 + id) WHERE vehicle != 'NONE'").run();
@@ -134,6 +147,11 @@ function init({ reset = false } = {}) {
   db.exec(SCHEMA);
   const cols = db.prepare('PRAGMA table_info(users)').all().map((c) => c.name);
   if (!cols.includes('plate')) db.exec('ALTER TABLE users ADD COLUMN plate TEXT');
+  if (!cols.includes('added')) db.exec('ALTER TABLE users ADD COLUMN added INTEGER DEFAULT 0');
+  if (!cols.includes('institution')) {
+    db.exec("ALTER TABLE users ADD COLUMN institution TEXT");
+    db.exec("UPDATE users SET institution = 'RNSIT' WHERE institution IS NULL"); // everyone seeded is the engineering college
+  }
   const n = db.prepare('SELECT COUNT(*) AS n FROM users').get().n;
   if (reset || n === 0) seed();
   syncClock(); // an existing database already has a demoTime; adopt it
@@ -141,7 +159,22 @@ function init({ reset = false } = {}) {
 }
 
 // ---------- domain logic ----------
+const pad = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+const mins = (hhmm) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5));
+
 function userWindow(u) {
+  // Only the engineering college gets an optimised slot, because it is the only
+  // institution whose timetable FlowGate controls. Everyone else on this campus
+  // arrives for a bell someone else sets, so their window is that bell, and the
+  // app says so rather than inventing a slot it has no authority to assign.
+  const inst = INSTITUTIONS.find((i) => i.id === (u.institution || 'RNSIT'));
+  if (inst && inst.id !== 'RNSIT') {
+    const a = mins(inst.arrive), l = mins(inst.leave);
+    return {
+      start: pad(a - 15), end: pad(a), exitStart: inst.leave, exitEnd: pad(l + 20),
+      label: `${inst.name} starts at ${inst.arrive}`, fixed: true,
+    };
+  }
   if (u.role === 'faculty') return { start: '08:00', end: '08:40', label: 'Faculty window' };
   const schedule = getSetting('schedule');
   const a = schedule?.entry.find((e) => e.cohort === u.cohort);
@@ -284,6 +317,76 @@ function plateEntry(plate, gateId, source = 'plate') {
   return { ...checkIn(b.code, gateId, source), plate: fmtPlate(u.plate) };
 }
 const fmtPlate = (p) => (p ? `${p.slice(0, 2)} ${p.slice(2, 4)} ${p.slice(4, 6)} ${p.slice(6)}` : '');
+
+// ---------- adding people from the control room ----------
+// In a real deployment the college exports its roster once and it is imported
+// here. For a demo, the same form adds one person on the spot.
+
+const VEHICLES = ['2W', '4W', 'NONE'];
+
+function addPerson(p) {
+  const name = String(p.name || '').trim().slice(0, 60);
+  if (!name) throw new Error('Name is required');
+  const role = p.role === 'faculty' ? 'faculty' : 'student';
+  // Six institutions share this campus, so a person belongs to one of them.
+  // Anything unrecognised falls back to the engineering college.
+  const inst = INSTITUTIONS.find((i) => i.id === String(p.institution || '').toUpperCase()) || INSTITUTIONS[0];
+  const isEng = inst.id === 'RNSIT';
+  const vehicle = VEHICLES.includes(p.vehicle) ? p.vehicle : '2W';
+  const area = AREAS.includes(p.area) ? p.area : AREAS[0];
+  // Department and year only mean something for the engineering college, because
+  // that is the only one whose cohorts the optimizer schedules.
+  const dept = isEng ? (DEPARTMENTS.includes(p.dept) ? p.dept : DEPARTMENTS[0]) : null;
+  const year = isEng && role === 'student' ? Math.min(4, Math.max(1, Number(p.year) || 1)) : null;
+  const cohort = isEng ? (role === 'student' ? `${dept}-Y${year}` : 'FACULTY') : inst.id;
+
+  const next = (db.prepare('SELECT COALESCE(MAX(id), 0) AS m FROM users').get().m) + 1;
+  const usn = String(p.usn || '').trim().toUpperCase()
+    || (isEng && role === 'student' ? `1RN${String(24 - year).padStart(2, '0')}${dept.slice(0, 2)}${String(900 + next).slice(-3)}`
+      : role === 'faculty' ? `FAC${900 + next}`
+      : `${inst.id.slice(0, 3)}${900 + next}`);
+  if (db.prepare('SELECT 1 FROM users WHERE usn = ?').get(usn)) throw new Error(`${usn} already exists`);
+
+  db.prepare(`INSERT INTO users(id, name, usn, role, dept, year, area, vehicle, cohort, institution, added, plate)
+    VALUES (?,?,?,?,?,?,?,?,?,?,1,?)`)
+    .run(next, name, usn, role, dept, year, area, vehicle, cohort, inst.id,
+      vehicle === 'NONE' ? null : `KA00FG${1000 + next}`);
+  return db.prepare('SELECT * FROM users WHERE id = ?').get(next);
+}
+
+// CSV: name,institution,role,dept,year,vehicle,area  (a header row is optional)
+function importPeople(text) {
+  const lines = String(text || '').trim().split(/\r?\n/).filter((l) => l.trim());
+  if (!lines.length) throw new Error('Nothing to import');
+  const head = lines[0].toLowerCase();
+  const cols = /name/.test(head) && /role|dept|vehicle|institution/.test(head)
+    ? lines.shift().split(',').map((s) => s.trim().toLowerCase())
+    : ['name', 'institution', 'role', 'dept', 'year', 'vehicle', 'area'];
+  const added = []; const failed = [];
+  for (const line of lines) {
+    const v = line.split(',').map((s) => s.trim());
+    const row = Object.fromEntries(cols.map((c, i) => [c, v[i]]));
+    try { added.push(addPerson(row)); } catch (e) { failed.push({ line, reason: e.message }); }
+  }
+  return { added: added.length, failed };
+}
+
+function removePerson(id) {
+  const u = db.prepare('SELECT * FROM users WHERE id = ?').get(Number(id));
+  if (!u) throw new Error('No such person');
+  if (!u.added) throw new Error('That one came with the demo data, so it cannot be removed here');
+  db.prepare('DELETE FROM bookings WHERE user_id = ?').run(u.id);
+  db.prepare('DELETE FROM credits WHERE user_id = ?').run(u.id);
+  db.prepare('DELETE FROM carpool_members WHERE user_id = ?').run(u.id);
+  db.prepare('DELETE FROM users WHERE id = ?').run(u.id);
+  return { ok: true, removed: u.name };
+}
+
+function clearAddedPeople() {
+  const ids = db.prepare('SELECT id FROM users WHERE added = 1').all().map((r) => r.id);
+  for (const id of ids) removePerson(id);
+  return { ok: true, removed: ids.length };
+}
 function plates() {
   return db.prepare(`SELECT u.plate, u.name, b.status FROM users u LEFT JOIN bookings b ON b.user_id = u.id AND b.date = ? AND b.status IN ('booked','checked_in')
     WHERE u.plate IS NOT NULL ORDER BY (b.status IS NULL), u.name LIMIT 40`).all(today()).map((r) => ({ ...r, display: fmtPlate(r.plate) }));
@@ -381,6 +484,7 @@ function liveStats() {
 
 module.exports = {
   init, seed, getSetting, setSetting, syncClock, nowMs, createBooking, cancelBooking, checkIn, cameraCount,
+  addPerson, importPeople, removePerson, clearAddedPeople,
   offerCarpool, joinCarpool, carpoolMatches, me, liveStats, today, creditsFor, leaderboard, plateEntry, plates,
   users: () => db.prepare('SELECT * FROM users ORDER BY role DESC, name').all(),
   passes: () => db.prepare(`SELECT b.code, b.status, b.gate_id, b.zone_id, b.vehicle, u.name FROM bookings b JOIN users u ON u.id = b.user_id

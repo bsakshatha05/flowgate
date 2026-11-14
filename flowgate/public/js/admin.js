@@ -8,10 +8,11 @@ Chart.defaults.borderColor = css('--border');
 // ---------- tabs ----------
 $$('.tab').forEach((t) => t.onclick = () => {
   $$('.tab').forEach((x) => x.classList.toggle('active', x === t));
-  ['live', 'sim', 'opt'].forEach((id) => $(`#tab-${id}`).classList.toggle('hidden', id !== t.dataset.tab));
+  ['live', 'sim', 'opt', 'people'].forEach((id) => $(`#tab-${id}`).classList.toggle('hidden', id !== t.dataset.tab));
   try { localStorage.setItem('fg-tab', t.dataset.tab); } catch {}
   if (t.dataset.tab === 'opt' && (!optLoaded || !$('#csv').value)) loadOptimizer();
   if (t.dataset.tab === 'sim') loadCompare();
+  if (t.dataset.tab === 'people') loadPeople();
 });
 
 function kpi(label, value, sub, cls = '') {
@@ -328,9 +329,119 @@ api('/api/copilot/status').then((st) => {
   if (st.hint) $('#askOut').innerHTML = `<span class="muted">${esc(st.hint)} Offline answers work without it.</span>`;
 });
 
+// ---------- people ----------
+// Faculty have no year, so the Year control disappears for them rather than
+// sitting there asking a question that has no answer.
+let pRole = 'student', pVehicle = '2W';
+function setSegValue(wrapId, attr, value) {
+  $$(`#${wrapId} button`).forEach((b) => {
+    const on = b.dataset[attr] === value;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-checked', String(on));
+  });
+}
+$('#pRole')?.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-role]'); if (!b) return;
+  pRole = b.dataset.role; setSegValue('pRole', 'role', pRole);
+  syncPersonForm();
+});
+$('#pVehicle')?.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-vehicle]'); if (!b) return;
+  pVehicle = b.dataset.vehicle; setSegValue('pVehicle', 'vehicle', pVehicle);
+});
+
+function fillPersonOptions() {
+  $('#pDept').innerHTML = (CFG.depts || []).map((d) => `<option>${d}</option>`).join('');
+  $('#pArea').innerHTML = (CFG.areas || []).map((a) => `<option>${a}</option>`).join('');
+  $('#pInst').innerHTML = (CFG.institutions || []).map((i) => `<option value="${i.id}">${esc(i.name)}</option>`).join('');
+  syncPersonForm();
+}
+
+// Department and year only exist for the engineering college. Every other
+// institution on this campus arrives for a bell FlowGate does not set, so the
+// form says what that bell is instead of asking for a slot it cannot assign.
+function syncPersonForm() {
+  const inst = (CFG.institutions || []).find((i) => i.id === $('#pInst').value) || {};
+  const isEng = inst.id === 'RNSIT';
+  $('#pDeptWrap').style.display = isEng ? '' : 'none';
+  $('#pYearWrap').style.display = isEng && pRole === 'student' ? '' : 'none';
+  $('#pInstHint').textContent = isEng
+    ? 'Gets a staggered arrival slot from the timetable.'
+    : `Arrives for the ${inst.arrive} start. FlowGate does not move this one, it works around it.`;
+}
+$('#pInst')?.addEventListener('change', syncPersonForm);
+
+// What to show in the Class column: engineering people have a department and a
+// year, everyone else is identified by their institution.
+function personWhere(p) {
+  const inst = (CFG.institutions || []).find((i) => i.id === p.institution);
+  if (p.institution && p.institution !== 'RNSIT') return inst ? inst.name : p.institution;
+  return p.role === 'faculty' ? `Faculty · ${p.dept}` : `${p.dept} Y${p.year}`;
+}
+
+async function loadPeople() {
+  const people = await api('/api/users');
+  const added = people.filter((p) => p.added);
+  $('#addedCount').textContent = added.length ? `${added.length} added` : 'none yet';
+  $('#addedCount').className = `pill ${added.length ? 'brand' : ''}`;
+  $('#addedTbl').innerHTML = added.length ? added.map((p) => `<tr>
+      <td><b>${esc(p.name)}</b></td>
+      <td class="mono">${esc(p.usn)}</td>
+      <td>${esc(personWhere(p))}</td>
+      <td>${p.vehicle === 'NONE' ? 'Walks' : p.vehicle}</td>
+      <td><button class="btn sm secondary" data-remove="${p.id}">Remove</button></td>
+    </tr>`).join('')
+    : '<tr><td colspan="5" class="muted">Nobody added yet. The 60 demo people are still there.</td></tr>';
+}
+
+$('#personForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  try {
+    const r = await api('/api/admin/people', {
+      name: $('#pName').value, role: pRole, institution: $('#pInst').value,
+      dept: $('#pDept').value, year: Number($('#pYear').value),
+      vehicle: pVehicle, area: $('#pArea').value,
+    });
+    toast(`${r.person.name} added as ${r.person.usn}`);
+    $('#pName').value = ''; $('#pName').focus();
+    loadPeople();
+  } catch (err) { toast(err.message); }
+});
+
+$('#addedTbl')?.addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-remove]'); if (!b) return;
+  try { const r = await api('/api/admin/people/remove', { id: Number(b.dataset.remove) }); toast(`${r.removed} removed`); loadPeople(); }
+  catch (err) { toast(err.message); }
+});
+
+$('#peopleFile')?.addEventListener('change', async (e) => {
+  const f = e.target.files[0]; if (f) { $('#peopleCsv').value = await f.text(); }
+});
+
+$('#importPeople')?.addEventListener('click', async () => {
+  try {
+    const r = await api('/api/admin/people/import', { csv: $('#peopleCsv').value });
+    // Say what failed and why, rather than a bare count: a roster usually has a
+    // couple of odd rows and the person importing it needs to know which.
+    $('#importMsg').textContent = r.failed.length
+      ? `Added ${r.added}. Skipped ${r.failed.length}: ${r.failed.slice(0, 3).map((f) => f.reason).join('; ')}`
+      : `Added ${r.added}.`;
+    toast(`Imported ${r.added} people`);
+    $('#peopleCsv').value = '';
+    loadPeople();
+  } catch (err) { toast(err.message); }
+});
+
+$('#clearAdded')?.addEventListener('click', async () => {
+  const r = await api('/api/admin/people/clear', {});
+  toast(r.removed ? `Removed ${r.removed}` : 'Nobody to remove');
+  loadPeople();
+});
+
 // ---------- boot ----------
 (async () => {
   CFG = await api('/api/config');
+  fillPersonOptions();
   $('#demoTime').value = CFG.demoTime || '';
   renderLive(await api('/api/stats'));
   const st0 = await api('/api/sim');

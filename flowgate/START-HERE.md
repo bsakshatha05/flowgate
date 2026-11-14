@@ -84,7 +84,7 @@ Double-click the same start file.
 | Home | A summary of the project |
 | Student App | What a student sees on their phone: arrival time, parking, QR pass |
 | Gate Scanner | What the security guard uses to scan a student in |
-| Control Room | The big screen for security: live map and the traffic simulation |
+| Control Room | The big screen for security: live map, the traffic simulation, and **People** for adding students or importing a roster |
 | Gate Signage | The display that would go on a TV near the gate |
 
 Use the links at the top of the page to move between them.
