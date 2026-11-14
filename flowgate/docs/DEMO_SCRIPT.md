@@ -63,6 +63,9 @@ If a judge pushes on the numbers, say plainly: one entrance, one morning, 5.8 mi
 - **Slot Optimizer**: "The red spike is today; the green steps are our slots, always under the gate-capacity line. Paste the real timetable here and click Apply; every student's slot updates instantly."
 
 ## Likely judge questions
+- **What if someone joins a carpool and then changes their mind?** They tap Leave this carpool. They get their own parking back and lose the 10 points for sharing, because the sharing did not happen.
+- **What if the driver pulls out?** They tap Withdraw this offer. Every rider is released and told to make their own way, and the driver loses the priority bay and the 5 points. The app will not let a driver quietly disappear on people who are counting on them.
+- **What if someone said car and turns up on a bike?** There is a "coming by something else today" switch in the app. It changes only that day, their registered vehicle stays as it is, and it re-books them into the right kind of space. If they are driving a carpool it refuses until they withdraw, because riders depend on that car.
 - **What if people ignore their slot?** The normal day already assumes 20% don't follow it; the stress day assumes 40% don't. Green credits and priority parking are the incentives.
 - **Is the forecast AI?** It is a 20-minute queue projection built only from bookings and reported incidents (it never sees the true stress-day demand), driving automatic actions: marshal lane, rider nudges, signage. It is deliberately simple and explainable. The copilot uses Claude when a key is configured and falls back to rules offline.
 - **Isn't it just a lower trigger?** No. We tested each action on its own: the marshal alone gets the peak to 65, and the rider nudge alone makes it worse, because moving people inside an already full hour just moves the spike. The gain comes from adding capacity early.

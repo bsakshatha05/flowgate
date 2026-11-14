@@ -49,26 +49,43 @@ async function render(quiet) {
         <button class="btn block" id="showPass" style="margin-top:12px">Show my pass</button>
         <button class="btn secondary block" id="cancel" style="margin-top:10px">Cancel, I am not coming</button>`}
       </section>`);
-  } else if (u.vehicle !== 'NONE' && !(cp && !cp.isDriver)) {
+  } else if (u.vehicleToday !== 'NONE' && !(cp && !cp.isDriver)) {
     html.push(`
       <section class="card">
         <h2>Book your parking space</h2>
         <p class="muted small" style="margin:6px 0 12px">One tap. We pick the emptiest area and the nearest gate for you.</p>
-        <button class="btn block" id="book">Book for today (${VEH[u.vehicle]})</button>
+        <button class="btn block" id="book">Book for today (${VEH[u.vehicleToday]})</button>
       </section>`);
   }
 
   // 3. Everything else is occasional, so it stays folded away.
+  // Plans change, so every carpool state has a way back out of it.
   const carpoolBody = cp
     ? `<p style="margin:0"><b>${esc(cp.driver.name)}</b> from ${esc(cp.area)}, leaving for the ${cp.window_start} slot</p>
-       <p class="muted small">${cp.isDriver ? 'You are driving' : 'You are riding'} · ${cp.members.length ? esc(cp.members.map((m) => m.name).join(', ')) : 'no riders yet'} · ${cp.seats - cp.members.length} seat(s) free</p>`
-    : `${u.vehicle === '4W' ? `<button class="btn teal block" id="offer" style="margin-bottom:12px">Offer 3 seats from ${esc(u.area)}</button>` : ''}
+       <p class="muted small">${cp.isDriver ? 'You are driving' : 'You are riding'} · ${cp.members.length ? esc(cp.members.map((m) => m.name).join(', ')) : 'no riders yet'} · ${cp.seats - cp.members.length} seat(s) free</p>
+       ${cp.isDriver
+         ? `<button class="btn secondary block" id="withdrawCp" style="margin-top:10px">Withdraw this offer</button>
+            ${cp.members.length ? `<p class="small muted" style="margin:6px 2px 0">${cp.members.length} rider(s) will be told to make their own way.</p>` : ''}`
+         : `<button class="btn secondary block" id="leaveCp" style="margin-top:10px">Leave this carpool</button>
+            <p class="small muted" style="margin:6px 2px 0">You will get your own parking back, and lose the 10 points for sharing.</p>`}`
+    : `${u.vehicleToday === '4W' ? `<button class="btn teal block" id="offer" style="margin-bottom:12px">Offer 3 seats from ${esc(u.area)}</button>` : ''}
        ${matches.length ? `<ul class="feed">${matches.map((m) => `
          <li><div style="flex:1"><b>${esc(m.driver)}</b><br><span class="small muted">${esc(m.area)} · ${m.window_start}${m.sameArea ? ' · same area' : ''}</span></div>
          <button class="btn sm" data-join="${m.id}">Join</button></li>`).join('')}</ul>`
          : '<p class="muted small" style="margin:0">Nobody is offering a ride right now.</p>'}`;
 
+  const VEHLABEL = { '2W': 'Two-wheeler', '4W': 'Car', NONE: 'Not driving' };
   html.push(`
+    <details class="more">
+      <summary>Coming by something else today?<span class="sum-right">${esc(VEHLABEL[u.vehicleToday] || '')}${u.vehicleChanged ? ' · changed' : ''}</span></summary>
+      <div class="more-body">
+        <p class="muted small" style="margin:0 0 10px">Just for today. Your usual vehicle stays ${esc(VEHLABEL[u.vehicle] || u.vehicle)}.</p>
+        <div class="seg" id="vehToday" role="radiogroup" aria-label="Coming by">
+          ${['2W', '4W', 'NONE'].map((v) => `<button type="button" role="radio" aria-checked="${v === u.vehicleToday}" data-veh="${v}"${v === u.vehicleToday ? ' class="on"' : ''}>${VEHLABEL[v]}</button>`).join('')}
+        </div>
+        <p class="small muted" style="margin:10px 2px 0">Changing this cancels today's parking so you can book the right kind of space.</p>
+      </div>
+    </details>
     <details class="more">
       <summary>Green credits<span class="sum-right">${cr ? cr.total + ' pts · ' + esc(cr.badge) : ''}</span></summary>
       <div class="more-body">
@@ -90,6 +107,25 @@ async function render(quiet) {
   $('#showPass')?.addEventListener('click', () => openPass(b, u));
   $('#offer')?.addEventListener('click', async () => {
     try { await api('/api/carpool/offer', { userId, seats: 3 }); toast('Carpool offered. You now park in Carpool Priority.'); render(); } catch (e) { toast(e.message); }
+  });
+  $('#leaveCp')?.addEventListener('click', async () => {
+    try { const r = await api('/api/carpool/leave', { userId }); toast(`Left ${r.driver}'s carpool. Book your own space again.`); render(); }
+    catch (e) { toast(e.message); }
+  });
+  $('#withdrawCp')?.addEventListener('click', async () => {
+    try {
+      const r = await api('/api/carpool/withdraw', { userId });
+      toast(r.released.length ? `Offer withdrawn. ${r.released.length} rider(s) told to make their own way.` : 'Offer withdrawn.');
+      render();
+    } catch (e) { toast(e.message); }
+  });
+  $('#vehToday')?.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-veh]'); if (!b) return;
+    try {
+      const r = await api('/api/vehicle-today', { userId, vehicle: b.dataset.veh });
+      toast(r.rebook ? 'Updated for today. Book your parking again.' : 'Updated. No parking needed today.');
+      render();
+    } catch (err) { toast(err.message); }
   });
   $$('[data-join]').forEach((btn) => btn.addEventListener('click', async () => {
     try { await api('/api/carpool/join', { userId, carpoolId: Number(btn.dataset.join) }); toast('Joined. One less vehicle at the gate.'); render(); } catch (e) { toast(e.message); }

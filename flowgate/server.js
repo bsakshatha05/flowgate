@@ -131,6 +131,11 @@ const routes = {
   'GET /api/carpool/matches': (q) => store.carpoolMatches(Number(q.get('userId'))),
   'POST /api/carpool/offer': (q, b) => { const r = store.offerCarpool(Number(b.userId), Number(b.seats) || 3); pushLive(); return r; },
   'POST /api/carpool/join': (q, b) => { const r = store.joinCarpool(Number(b.userId), Number(b.carpoolId)); pushLive(); return r; },
+  // Plans change. A rider can get out, a driver can pull out, and either of them
+  // can turn up on a different vehicle than they said.
+  'POST /api/carpool/leave': (q, b) => { const r = store.leaveCarpool(Number(b.userId)); pushLive(); return r; },
+  'POST /api/carpool/withdraw': (q, b) => { const r = store.withdrawCarpool(Number(b.userId)); pushLive(); return r; },
+  'POST /api/vehicle-today': (q, b) => { const r = store.setVehicleToday(Number(b.userId), b.vehicle); pushLive(); return r; },
 
   'GET /api/optimizer': () => ({ cohorts: cohorts(), schedule: store.getSetting('schedule') }),
   'POST /api/optimizer/run': (q, b) => runOptimizer(b.cohorts?.length ? b.cohorts : cohorts(), b.params || {}),

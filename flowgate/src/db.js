@@ -15,6 +15,10 @@ const SCHEMA = `
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY, name TEXT, usn TEXT, role TEXT, dept TEXT, year INTEGER,
   area TEXT, vehicle TEXT, cohort TEXT, institution TEXT,
+  -- "today I came on my bike instead". vehicle is what they normally use; this
+  -- overrides it for one date only, so plans can change without rewriting who
+  -- somebody is.
+  vehicle_today TEXT, vehicle_today_date TEXT,
   -- 1 for anyone added through the control room rather than the demo seed. Reset
   -- keeps these: losing a person you added live, mid-demo, would be the worst
   -- possible moment to find that out.
@@ -148,6 +152,10 @@ function init({ reset = false } = {}) {
   const cols = db.prepare('PRAGMA table_info(users)').all().map((c) => c.name);
   if (!cols.includes('plate')) db.exec('ALTER TABLE users ADD COLUMN plate TEXT');
   if (!cols.includes('added')) db.exec('ALTER TABLE users ADD COLUMN added INTEGER DEFAULT 0');
+  if (!cols.includes('vehicle_today')) {
+    db.exec('ALTER TABLE users ADD COLUMN vehicle_today TEXT');
+    db.exec('ALTER TABLE users ADD COLUMN vehicle_today_date TEXT');
+  }
   if (!cols.includes('institution')) {
     db.exec("ALTER TABLE users ADD COLUMN institution TEXT");
     db.exec("UPDATE users SET institution = 'RNSIT' WHERE institution IS NULL"); // everyone seeded is the engineering college
@@ -220,16 +228,17 @@ function chooseZone(u, carpool) {
 function createBooking(userId, { silent = false } = {}) {
   const u = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
   if (!u) throw new Error('Unknown user');
-  if (u.vehicle === 'NONE') throw new Error('No vehicle registered. Join a carpool instead.');
+  const veh = vehicleOf(u);
+  if (veh === 'NONE') throw new Error('You are not driving today. Join a carpool, or switch back to your vehicle.');
   const existing = db.prepare("SELECT * FROM bookings WHERE user_id = ? AND date = ? AND status != 'cancelled'").get(userId, today());
   if (existing) return existing;
   const carpool = activeCarpoolFor(userId);
-  const zone = chooseZone(u, carpool);
+  const zone = chooseZone({ ...u, vehicle: veh }, carpool);
   if (!zone) throw new Error('All parking zones are full. Please use the college bus or a carpool.');
   const w = userWindow(u);
   const c = code();
   db.prepare(`INSERT INTO bookings(user_id, date, vehicle, zone_id, gate_id, window_start, window_end, code, status, carpool_id, created_at)
-    VALUES (?,?,?,?,?,?,?,?, 'booked', ?, ?)`).run(userId, today(), u.vehicle, zone.id, zone.gate, w.start, w.end, c, carpool?.id ?? null, now());
+    VALUES (?,?,?,?,?,?,?,?, 'booked', ?, ?)`).run(userId, today(), veh, zone.id, zone.gate, w.start, w.end, c, carpool?.id ?? null, now());
   return db.prepare('SELECT * FROM bookings WHERE code = ?').get(c);
 }
 
@@ -403,9 +412,71 @@ function cameraCount(gateId, direction, vehicleType, count, source = 'camera') {
   }
 }
 
+// What this person is actually arriving in today. `vehicle` is what they normally
+// use; `vehicle_today` overrides it for one date, so a plan can change without
+// rewriting the person.
+function vehicleOf(u) {
+  return u.vehicle_today && u.vehicle_today_date === today() ? u.vehicle_today : u.vehicle;
+}
+
+// A rider changes their mind and wants their own parking back.
+function leaveCarpool(userId) {
+  const cp = activeCarpoolFor(userId);
+  if (!cp) throw new Error('You are not in a carpool today');
+  if (cp.driver_id === userId) throw new Error('You are the driver. Withdraw the offer instead.');
+  db.prepare('DELETE FROM carpool_members WHERE carpool_id = ? AND user_id = ?').run(cp.id, userId);
+  // The 10 points were for sharing a ride that is no longer happening.
+  award(userId, -10, 'Left a carpool');
+  const driver = db.prepare('SELECT name FROM users WHERE id = ?').get(cp.driver_id);
+  return { ok: true, driver: driver?.name || 'the driver' };
+}
+
+// The driver cannot come after all. Riders must not silently lose their ride, so
+// they are released and their bookings restored to them to redo.
+function withdrawCarpool(driverId) {
+  const cp = db.prepare('SELECT * FROM carpools WHERE driver_id = ? AND date = ?').get(driverId, today());
+  if (!cp) throw new Error('You are not offering a carpool today');
+  const riders = db.prepare(`SELECT u.id, u.name FROM carpool_members m JOIN users u ON u.id = m.user_id
+    WHERE m.carpool_id = ?`).all(cp.id);
+  for (const r of riders) award(r.id, -10, 'Carpool withdrawn by the driver');
+  db.prepare('DELETE FROM carpool_members WHERE carpool_id = ?').run(cp.id);
+  db.prepare('DELETE FROM carpools WHERE id = ?').run(cp.id);
+  award(driverId, -5, 'Withdrew a carpool offer');
+  // The driver loses the priority bay and goes back to an ordinary car space.
+  const b = db.prepare("SELECT * FROM bookings WHERE user_id = ? AND date = ? AND status = 'booked'").get(driverId, today());
+  if (b) {
+    const u = db.prepare('SELECT * FROM users WHERE id = ?').get(driverId);
+    const z = chooseZone({ ...u, vehicle: vehicleOf(u) }, null);
+    if (z) db.prepare('UPDATE bookings SET zone_id = ?, gate_id = ?, carpool_id = NULL WHERE id = ?').run(z.id, z.gate, b.id);
+  }
+  return { ok: true, released: riders.map((r) => r.name) };
+}
+
+// "I said I was driving, but today I am on my bike."
+function setVehicleToday(userId, vehicle) {
+  const u = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+  if (!u) throw new Error('Unknown student');
+  if (!VEHICLES.includes(vehicle)) throw new Error('Pick two-wheeler, car, or not driving');
+  const cp = activeCarpoolFor(userId);
+  // Refuse the changes that would quietly break somebody else's morning.
+  if (cp && cp.driver_id === userId && vehicle !== '4W') {
+    const n = db.prepare('SELECT COUNT(*) AS n FROM carpool_members WHERE carpool_id = ?').get(cp.id).n;
+    throw new Error(n ? `You are driving ${n} rider(s) today. Withdraw the carpool first.`
+                      : 'You are offering a carpool. Withdraw it first.');
+  }
+  if (cp && cp.driver_id !== userId && vehicle !== 'NONE') {
+    throw new Error('You are riding in someone else\'s carpool. Leave it first.');
+  }
+  db.prepare('UPDATE users SET vehicle_today = ?, vehicle_today_date = ? WHERE id = ?').run(vehicle, today(), userId);
+  // The old booking was for the old vehicle, so it cannot stand.
+  const b = db.prepare("SELECT * FROM bookings WHERE user_id = ? AND date = ? AND status = 'booked'").get(userId, today());
+  if (b) db.prepare("UPDATE bookings SET status = 'cancelled' WHERE id = ?").run(b.id);
+  return { ok: true, vehicle, rebook: vehicle !== 'NONE' };
+}
+
 function offerCarpool(driverId, seats = 3, opts = {}) {
   const u = db.prepare('SELECT * FROM users WHERE id = ?').get(driverId);
-  if (!u || u.vehicle !== '4W') throw new Error('Only users with a registered car can offer a carpool.');
+  if (!u || vehicleOf(u) !== '4W') throw new Error('Only someone arriving by car today can offer a carpool.');
   const existing = db.prepare('SELECT * FROM carpools WHERE driver_id = ? AND date = ?').get(driverId, today());
   if (existing) return existing;
   const w = userWindow(u);
@@ -454,7 +525,7 @@ function me(userId) {
     const driver = db.prepare('SELECT id, name, area FROM users WHERE id = ?').get(carpool.driver_id);
     carpoolInfo = { ...carpool, driver, members, isDriver: carpool.driver_id === u.id };
   }
-  return { user: { ...u, plateDisplay: fmtPlate(u.plate) }, credits: creditsFor(u.id), window: userWindow(u), booking, zone: booking && ZONES.find((z) => z.id === booking.zone_id), carpool: carpoolInfo };
+  return { user: { ...u, plateDisplay: fmtPlate(u.plate), vehicleToday: vehicleOf(u), vehicleChanged: vehicleOf(u) !== u.vehicle }, credits: creditsFor(u.id), window: userWindow(u), booking, zone: booking && ZONES.find((z) => z.id === booking.zone_id), carpool: carpoolInfo };
 }
 
 function liveStats() {
@@ -485,6 +556,7 @@ function liveStats() {
 module.exports = {
   init, seed, getSetting, setSetting, syncClock, nowMs, createBooking, cancelBooking, checkIn, cameraCount,
   addPerson, importPeople, removePerson, clearAddedPeople,
+  leaveCarpool, withdrawCarpool, setVehicleToday, vehicleOf,
   offerCarpool, joinCarpool, carpoolMatches, me, liveStats, today, creditsFor, leaderboard, plateEntry, plates,
   users: () => db.prepare('SELECT * FROM users ORDER BY role DESC, name').all(),
   passes: () => db.prepare(`SELECT b.code, b.status, b.gate_id, b.zone_id, b.vehicle, u.name FROM bookings b JOIN users u ON u.id = b.user_id
