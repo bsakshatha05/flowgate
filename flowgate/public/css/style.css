@@ -157,10 +157,11 @@ th { color: var(--muted); font-weight: 600; font-size: .78rem; text-transform: u
    nothing to the card's natural height, so 25 rows cannot stretch the card (and
    its grid neighbour, the map) to 1500px. The card is sized by the map beside
    it, and the feed grows to fill that and scrolls. */
-.feed {
-  list-style: none; margin: 0; padding: 0;
-  flex: 1 1 0; height: 0; min-height: 180px; overflow: auto;
-}
+.feed { list-style: none; margin: 0; padding: 0; }
+/* Only the Live Ops feed, which is a direct child of its card, stretches to match
+   the map beside it. A short list tucked inside a collapsible section is sized by
+   its own rows, so one entry does not leave 180px of empty card under it. */
+.card > .feed { flex: 1 1 0; height: 0; min-height: 180px; overflow: auto; }
 .feed li { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-bottom: 1px dashed var(--border); font-size: .87rem; }
 .feed li:last-child { border-bottom: 0; }
 .card:has(> .feed) { display: flex; flex-direction: column; }
@@ -302,6 +303,9 @@ a.feature:hover b { color: var(--brand); }
    longer timetable does not make the card grow and shove the buttons down the
    page while you are reading it. */
 .fixed-table { height: 260px; overflow: auto; border: 1px solid var(--border); border-radius: 10px; }
+/* A list that is as tall as its contents, up to a cap, instead of a fixed box
+   with empty space under a short list. */
+.fixed-table.grow { height: auto; }
 .fixed-table table { width: 100%; border-collapse: collapse; }
 .fixed-table thead th {
   position: sticky; top: 0; z-index: 1; background: var(--surface-2);
@@ -389,3 +393,46 @@ video#cam { width: 100%; border-radius: 12px; background: #000; aspect-ratio: 4/
 .chart-box { position: relative; height: 260px; }
 .compare-num { font-size: 1.35rem; font-weight: 800; }
 .compare-num s { color: var(--muted); font-weight: 600; font-size: .95rem; margin-right: 6px; }
+
+/* A row action that is only an icon. Quiet until you reach for it, so a column of
+   them does not read as a column of red. */
+.icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; padding: 0;
+  border: 0; border-radius: 9px; background: transparent;
+  color: var(--muted); cursor: pointer;
+  transition: background .12s ease, color .12s ease;
+}
+.icon-btn:hover, .icon-btn:focus-visible { background: var(--surface-2); color: var(--text); }
+.icon-btn.danger { color: var(--bad); }
+.icon-btn.danger:hover, .icon-btn.danger:focus-visible { background: var(--bad-bg); color: var(--bad); }
+.icon-btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+
+/* Required fields, and what a form says when one is empty. */
+.req { color: var(--bad); font-weight: 700; }
+.field-err { margin: 6px 2px 0; font-size: 12.5px; color: var(--bad); }
+input.bad, select.bad { border-color: var(--bad); box-shadow: 0 0 0 3px var(--bad-bg); }
+
+/* A long name truncates rather than pushing the other columns off the card. */
+.fixed-table td b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* The vehicle a person uses, as a glyph. The word stays in the title and the
+   accessible name. */
+.veh { display: inline-flex; color: var(--muted); }
+
+/* The added-people table: fixed columns, so one long name or institution cannot
+   push the vehicle and the remove button off the card. */
+table.tight { table-layout: fixed; width: 100%; }
+table.tight td, table.tight th { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The icon columns centre on their own header, so the glyphs line up in a
+   single column rather than hugging the left edge of a wide cell. */
+table.tight td:has(> .icon-btn), table.tight td:has(> .veh),
+table.tight th.col-icon { overflow: visible; text-overflow: clip; text-align: center; padding-inline: 0; }
+
+/* The gate cards: however many gates there are, they share the row evenly rather
+   than leaving a third of it empty. */
+#gateCards { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+
+/* The two cards on the People tab sit at the top of the row and each ends where
+   its own content ends, instead of both stretching to the taller one. */
+#tab-people > .g2 { align-items: start; }

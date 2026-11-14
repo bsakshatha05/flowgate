@@ -197,13 +197,12 @@
           <p class="small muted" style="margin:6px 0 14px">They appear straight away in the Student App and the Gate Scanner, and they are kept when you reset the demo data.</p>
           <form id="personForm" class="grid" style="gap:12px">
             <div class="grid g2" style="gap:12px">
-              <div><label for="pName">Name</label><input id="pName" required placeholder="Priya Shenoy" autocomplete="off"></div>
-              <div><label for="pUsn">Registration number</label><input id="pUsn" placeholder="1RN22CS045" autocomplete="off" style="text-transform:uppercase">
-                <p class="small muted" style="margin:6px 2px 0">The real USN. Leave it blank and one is made up for the demo.</p></div>
+              <div><label for="pName">Name <span class="req" aria-hidden="true">*</span></label><input id="pName" required maxlength="32" placeholder="Priya Shenoy" autocomplete="off"></div>
+              <div><label for="pUsn">Registration number <span class="req" aria-hidden="true">*</span></label><input id="pUsn" required maxlength="16" placeholder="1RN22CS045" autocomplete="off" style="text-transform:uppercase"><p class="field-err" id="pUsnErr" role="alert" hidden></p></div>
             </div>
             <div><label for="pInst">Institution</label><select id="pInst"></select>
               <p class="small muted" id="pInstHint" style="margin:6px 2px 0"></p></div>
-            <div class="grid" style="gap:12px">
+            <div style="display:flex; flex-wrap:wrap; gap:12px 24px">
               <div><span class="lbl">Role</span>
                 <div class="seg" id="pRole" role="radiogroup" aria-label="Role">
                   <button type="button" role="radio" aria-checked="true" data-role="student" class="on">Student</button>
@@ -220,6 +219,11 @@
             </div>
             <div id="pDeptWrap"><label for="pDept">Engineering branch</label><select id="pDept"></select></div>
             <div class="grid g2" style="gap:12px">
+              <div id="pCourseWrap"><label for="pCourse">Course</label><select id="pCourse"></select></div>
+              <div id="pGrpYearWrap"><label for="pGrpYear">Year</label><select id="pGrpYear"></select></div>
+            </div>
+            <div id="pClassWrap"><label for="pClass">Class</label><select id="pClass"></select></div>
+            <div class="grid g2" style="gap:12px">
               <div id="pYearWrap"><label for="pYear">Year</label><select id="pYear"><option>1</option><option>2</option><option>3</option><option>4</option></select></div>
               <div><label for="pArea">Lives in</label><select id="pArea"></select></div>
             </div>
@@ -229,9 +233,9 @@
           <details class="more" style="margin-top:16px">
             <summary>Load a whole roster<span class="sum-right">CSV</span></summary>
             <div class="more-body">
-              <p class="small muted" style="margin:0 0 8px">One row per person: <code>name,usn,institution,role,dept,year,vehicle,area</code>. A header row is optional. The USN must be unique; leave it blank and one is generated. Institution is one of <code>RNSIT, PG, SCHOOL_SR, SCHOOL_JR, PUC, DEGREE</code>; leave it blank for the engineering college. Department and year only apply to RNSIT. This is how each institution would load its real list.</p>
+              <p class="small muted" style="margin:0 0 8px">One row per person: <code>name,usn,institution,role,dept,year,vehicle,area,grp,course</code>. A header row is optional. The registration number is required and must be unique. Institution is one of <code>RNSIT, PG, SCHOOL, PUC, DEGREE</code>; leave it blank for the engineering college. Department and year apply to RNSIT. Elsewhere, <code>grp</code> is the school class (<code>Grade 8</code>, <code>LKG</code>) and <code>course</code> plus <code>year</code> is the course (<code>MCA</code>, 2). This is how each institution would load its real list.</p>
               <input type="file" id="peopleFile" accept=".csv,text/csv">
-              <textarea id="peopleCsv" rows="6" style="margin-top:8px" placeholder="Priya Shenoy,1RN22AI045,RNSIT,student,AIML,2,4W,Kengeri&#10;Arjun Rao,,SCHOOL_SR,student,,,4W,RR Nagar"></textarea>
+              <textarea id="peopleCsv" rows="6" style="margin-top:8px" placeholder="Priya Shenoy,1RN22AI045,RNSIT,student,AIML,2,4W,Kengeri&#10;Arjun Rao,RNSIS2291,SCHOOL,student,,,4W,RR Nagar,Grade 8"></textarea>
               <button class="btn secondary block" id="importPeople" style="margin-top:8px">Import</button>
               <p class="small muted" id="importMsg" style="margin:8px 2px 0"></p>
             </div>
@@ -241,9 +245,9 @@
         <div class="card">
           <div class="card-head"><h2>People you added</h2><span class="pill" id="addedCount">none</span></div>
           <p class="small muted" style="margin:6px 0 10px">The 60 demo people are not listed here. They cannot be removed, because the demo depends on them.</p>
-          <div class="fixed-table" style="height:380px">
-            <table>
-              <thead><tr><th>Name</th><th>ID</th><th>Where</th><th>Vehicle</th><th></th></tr></thead>
+          <div class="fixed-table grow" style="max-height:420px">
+            <table class="tight">
+              <thead><tr><th style="width:23%">Name</th><th style="width:19%">ID</th><th>Institution</th><th class="col-icon" style="width:74px">Vehicle</th><th class="col-icon" style="width:40px"></th></tr></thead>
               <tbody id="addedTbl"></tbody>
             </table>
           </div>

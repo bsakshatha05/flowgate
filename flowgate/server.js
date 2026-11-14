@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const store = require('./src/db');
-const { GATES, ZONES, COHORTS, CAMPUS, DEPARTMENTS, ALL_DEPARTMENTS, TEACH_OUT_DEPARTMENTS, DEPARTMENT_NAMES, AREAS, INSTITUTIONS } = require('./src/config');
+const { GATES, ZONES, COHORTS, CAMPUS, DEPARTMENTS, ALL_DEPARTMENTS, TEACH_OUT_DEPARTMENTS, DEPARTMENT_NAMES, AREAS, INSTITUTIONS, SCHOOL_PICKER } = require('./src/config');
 const { runOptimizer } = require('./src/optimizer');
 const { Simulator, compare, COMPLIANCE, DAYS } = require('./src/simulator');
 const copilot = require('./src/copilot');
@@ -92,7 +92,11 @@ function serveStatic(req, res, pathname) {
 // ---------- routes ----------
 const routes = {
   'GET /api/config': () => ({ campus: CAMPUS, gates: GATES, zones: ZONES, compliance: COMPLIANCE, depts: ALL_DEPARTMENTS, teachOut: TEACH_OUT_DEPARTMENTS, deptNames: DEPARTMENT_NAMES, areas: AREAS, demoTime: store.getSetting('demoTime'),
-    institutions: INSTITUTIONS.map((i) => ({ id: i.id, name: i.name, arrive: i.arrive, kind: i.kind })) }),
+    institutions: [...INSTITUTIONS.filter((i) => !i.school), SCHOOL_PICKER]
+      .map((i) => ({ id: i.id, name: i.name, short: i.short || i.name, arrive: i.arrive, kind: i.kind,
+        courses: i.courses || null, years: i.years || 0, yearNames: i.yearNames || null, classes: i.classes || null,
+        juniorArrive: i.juniorArrive || null, juniorClasses: i.juniorClasses || null }))
+      .sort((a, b) => (a.id === 'RNSIT' ? -1 : b.id === 'RNSIT' ? 1 : 0)) }),
   'POST /api/admin/demo-time': (q, b) => { store.setSetting('demoTime', /^\d{2}:\d{2}$/.test(b.time || '') ? b.time : null); store.syncClock(); return { demoTime: store.getSetting('demoTime') }; },
   'GET /api/users': () => store.users(),
   // Managing people from the control room. In a real deployment the college

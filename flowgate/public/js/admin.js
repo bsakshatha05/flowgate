@@ -351,12 +351,10 @@ $('#pVehicle')?.addEventListener('click', (e) => {
 });
 
 function fillPersonOptions() {
-  // Show the programme a person would recognise, not the internal code. Teach-out
-  // branches are marked so nobody wonders why they take no new intake.
-  const out = CFG.teachOut || [];
+  // Show the programme a person would recognise, not the internal code.
   const dn = CFG.deptNames || {};
   $('#pDept').innerHTML = (CFG.depts || []).map((d) =>
-    `<option value="${d}">${esc(dn[d] || d)}${out.includes(d) ? ' · no new admissions' : ''}</option>`).join('');
+    `<option value="${d}">${esc(dn[d] || d)}</option>`).join('');
   $('#pArea').innerHTML = (CFG.areas || []).map((a) => `<option>${a}</option>`).join('');
   $('#pInst').innerHTML = (CFG.institutions || []).map((i) => `<option value="${i.id}">${esc(i.name)}</option>`).join('');
   syncPersonForm();
@@ -368,23 +366,85 @@ function fillPersonOptions() {
 function syncPersonForm() {
   const inst = (CFG.institutions || []).find((i) => i.id === $('#pInst').value) || {};
   const isEng = inst.id === 'RNSIT';
+  const student = pRole === 'student';
   $('#pDeptWrap').style.display = isEng ? '' : 'none';
-  $('#pYearWrap').style.display = isEng && pRole === 'student' ? '' : 'none';
+  $('#pYearWrap').style.display = isEng && student ? '' : 'none';
+  // The others have a course and a year, like the branch and year above, or a
+  // single class where the class already says which year it is. Staff are in
+  // neither, so they get no picker at all.
+  const showCourse = !isEng && student && !!inst.courses;
+  const showClass = !isEng && student && !!inst.classes;
+  $('#pCourseWrap').style.display = showCourse ? '' : 'none';
+  $('#pGrpYearWrap').style.display = showCourse ? '' : 'none';
+  $('#pClassWrap').style.display = showClass ? '' : 'none';
+  if (showCourse) {
+    $('#pCourse').innerHTML = inst.courses.map((c) => `<option>${esc(c)}</option>`).join('');
+    const names = inst.yearNames || [];
+    $('#pGrpYear').innerHTML = Array.from({ length: inst.years }, (_, i) =>
+      `<option value="${i + 1}">${esc(names[i] || i + 1)}</option>`).join('');
+  }
+  if (showClass) {
+    // Rebuilding the list must not silently throw away the class already chosen,
+    // or the hint below would describe a different child's bell.
+    const chosen = $('#pClass').value;
+    $('#pClass').innerHTML = inst.classes.map((c) => `<option>${esc(c)}</option>`).join('');
+    if (inst.classes.includes(chosen)) $('#pClass').value = chosen;
+  }
   $('#pInstHint').textContent = isEng
     ? 'Pick the branch below. Gets a staggered arrival slot from the timetable.'
-    : `Arrives for the ${inst.arrive} start. No branch needed, and FlowGate does not move this one, it works around it.`;
+    : `Arrives for the ${arriveFor(inst, $('#pClass').value)} start. FlowGate does not move this one, it works around it.`;
+}
+// The school's junior classes have their own bell, so the hint follows the class.
+function arriveFor(inst, cls) {
+  const junior = inst.juniorClasses || [];
+  return (inst.juniorArrive && junior.includes(cls)) ? inst.juniorArrive : inst.arrive;
 }
 $('#pInst')?.addEventListener('change', syncPersonForm);
+$('#pClass')?.addEventListener('change', syncPersonForm);
 
 const VEHICLE_LABEL = { '2W': 'Two-wheeler', '4W': 'Car', NONE: 'Walks' };
 
-// What to show in the Class column: engineering people have a department and a
-// year, everyone else is identified by their institution.
-function personWhere(p) {
-  const inst = (CFG.institutions || []).find((i) => i.id === p.institution);
-  if (p.institution && p.institution !== 'RNSIT') return inst ? inst.name : p.institution;
-  const name = (CFG.deptNames || {})[p.dept] || p.dept;
-  return p.role === 'faculty' ? `Faculty · ${name}` : `${name} · Y${p.year}`;
+// A column of "Two-wheeler" is a lot of width for three possible values. The icon
+// carries it, with the word still there for a screen reader and on hover.
+const VEHICLE_ICON = {
+  '2W': '<path d="M15.5 6h-2.2a1.1 1.1 0 1 0 0 2.2h1.4l1.1 3.1-3.3 3H9.6a4.2 4.2 0 1 0 .2 2.2h4.1l4.3-3.9.4 1.1'
+      + 'a4.2 4.2 0 1 0 2.1-.7l-3.1-8.3A1.6 1.6 0 0 0 15.5 6z"/>'
+      + '<circle cx="5.6" cy="17.4" r="1.4" fill="var(--surface)"/><circle cx="19.4" cy="17.4" r="1.4" fill="var(--surface)"/>',
+  '4W': '<path d="M20.4 10.9 18.7 6.9A2.6 2.6 0 0 0 16.3 5.3H7.7A2.6 2.6 0 0 0 5.3 6.9l-1.7 4A2.4 2.4 0 0 0 2 13.2V17'
+      + 'a1 1 0 0 0 1 1h.6a3.2 3.2 0 0 1 6.4 0h4a3.2 3.2 0 0 1 6.4 0h.6a1 1 0 0 0 1-1v-3.8a2.4 2.4 0 0 0-1.6-2.3z'
+      + 'M7.1 7.6a.7.7 0 0 1 .6-.4h8.6a.7.7 0 0 1 .6.4l1.4 3.3H5.7z"/>'
+      + '<circle cx="6.8" cy="18" r="2.2"/><circle cx="17.2" cy="18" r="2.2"/>',
+  NONE: '<circle cx="13.6" cy="4" r="2"/>'
+      + '<path d="M12.3 7.2 8.9 9.1a1.2 1.2 0 0 0-.6.8l-.7 3.3a1.2 1.2 0 0 0 2.3.5l.5-2.4 1.6-.9-1.1 4.4'
+      + 'a1.6 1.6 0 0 0 .3 1.4l2.8 3.6a1.2 1.2 0 0 0 1.9-1.5l-2.4-3.1 1.3-5 .9 1.8a1.2 1.2 0 0 0 1.1.7h2'
+      + 'a1.2 1.2 0 0 0 0-2.4h-1.3l-1.7-3.4a2.4 2.4 0 0 0-3.2-1.1z"/>'
+      + '<path d="M9.7 15.6 7.1 19.9a1.2 1.2 0 0 0 2 1.3l2.3-3.8z"/>',
+};
+function vehicleCell(v) {
+  const label = VEHICLE_LABEL[v] || v;
+  const path = VEHICLE_ICON[v];
+  if (!path) return esc(label);
+  return `<span class="veh" title="${esc(label)}"><svg viewBox="0 0 24 24" width="21" height="21"
+    fill="currentColor" stroke="none" role="img" aria-label="${esc(label)}">${path}</svg></span>`;
+}
+
+// The Institution column: which of the six they belong to, then the branch, class
+// or course inside it. Short names, because the full ones do not fit a cell.
+function personInstitution(p) {
+  // Stored people carry the modelled id (SCHOOL_JR / SCHOOL_SR); the picker knows
+  // them as one school.
+  const id = /^SCHOOL_/.test(p.institution || '') ? 'SCHOOL' : (p.institution || 'RNSIT');
+  const inst = (CFG.institutions || []).find((i) => i.id === id);
+  const where = inst ? (inst.short || inst.name) : id;
+  if (p.institution && p.institution !== 'RNSIT') {
+    if (!p.grp) return where;
+    // A class says its own year ("Grade 7"); a course needs one beside it.
+    const names = inst?.yearNames || [];
+    const yr = p.year ? ` ${names[p.year - 1] || `Y${p.year}`}` : '';
+    return inst?.classes ? `${where} · ${p.grp}` : `${where} · ${p.grp}${yr}`;
+  }
+  const dept = (CFG.deptNames || {})[p.dept] || p.dept || '';
+  return p.role === 'faculty' ? `${where} · Faculty, ${dept}` : `${where} · ${dept} Y${p.year}`;
 }
 
 async function loadPeople() {
@@ -393,11 +453,16 @@ async function loadPeople() {
   $('#addedCount').textContent = added.length ? `${added.length} added` : 'none yet';
   $('#addedCount').className = `pill ${added.length ? 'brand' : ''}`;
   $('#addedTbl').innerHTML = added.length ? added.map((p) => `<tr>
-      <td><b>${esc(p.name)}</b></td>
+      <td><b title="${esc(p.name)}">${esc(p.name)}</b></td>
       <td class="mono">${esc(p.usn)}</td>
-      <td>${esc(personWhere(p))}</td>
-      <td>${VEHICLE_LABEL[p.vehicle] || p.vehicle}</td>
-      <td><button class="btn sm secondary" data-remove="${p.id}">Remove</button></td>
+      <td title="${esc(personInstitution(p))}">${esc(personInstitution(p))}</td>
+      <td>${vehicleCell(p.vehicle)}</td>
+      <td><button class="icon-btn danger" data-remove="${p.id}" title="Remove ${esc(p.name)}" aria-label="Remove ${esc(p.name)}">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v5M14 11v5"/>
+        </svg>
+      </button></td>
     </tr>`).join('')
     : '<tr><td colspan="5" class="muted">Nobody added yet. The 60 demo people are still there.</td></tr>';
 }
@@ -407,14 +472,37 @@ $('#personForm')?.addEventListener('submit', async (e) => {
   try {
     const r = await api('/api/admin/people', {
       name: $('#pName').value, usn: $('#pUsn').value, role: pRole, institution: $('#pInst').value,
-      dept: $('#pDept').value, year: Number($('#pYear').value),
+      dept: $('#pDept').value, course: $('#pCourse').value,
+      year: Number(($('#pYearWrap').style.display === 'none' ? $('#pGrpYear') : $('#pYear')).value),
+      grp: $('#pClass').value,
       vehicle: pVehicle, area: $('#pArea').value,
     });
+    setUsnError('');
     toast(`${r.person.name} added as ${r.person.usn}`);
     $('#pName').value = ''; $('#pUsn').value = ''; $('#pName').focus();
     loadPeople();
-  } catch (err) { toast(err.message); }
+  } catch (err) {
+    if (/registration number|already exists/i.test(err.message)) setUsnError(err.message);
+    toast(err.message);
+  }
 });
+
+function setUsnError(msg) {
+  const box = $('#pUsnErr'), field = $('#pUsn');
+  box.textContent = msg;
+  box.hidden = !msg;
+  field.classList.toggle('bad', !!msg);
+  field.setAttribute('aria-invalid', msg ? 'true' : 'false');
+  // Do not pull focus off an earlier field the browser is already complaining about.
+  if (msg && $('#pName').checkValidity()) field.focus();
+}
+// The browser's own "please fill in this field" bubble is easy to miss on a
+// projector, so show the same thing in the form.
+$('#pUsn')?.addEventListener('invalid', (e) => {
+  e.preventDefault();
+  setUsnError('A registration number is required');
+});
+$('#pUsn')?.addEventListener('input', () => setUsnError(''));
 
 $('#addedTbl')?.addEventListener('click', async (e) => {
   const b = e.target.closest('[data-remove]'); if (!b) return;

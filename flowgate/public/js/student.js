@@ -7,13 +7,19 @@ const VEH = { '2W': 'Two-wheeler', '4W': 'Car', NONE: 'No vehicle' };
 // AIDS is the exception: nobody should read that word in a list of people.
 const deptLabel = (d) => (d === 'AIDS' ? 'AI&DS' : d);
 const INST_SHORT = {
-  RNSIT: '', PG: 'MBA/MCA', SCHOOL_SR: 'School', SCHOOL_JR: 'School',
-  PUC: 'PU College', DEGREE: 'Degree College',
+  RNSIT: '', PG: 'RNSIT PG', SCHOOL_SR: 'RNS School', SCHOOL_JR: 'RNS School',
+  PUC: 'RNS PU College', DEGREE: 'RNS Degree College',
 };
 
+// Who this is, in the words they would use: their institution, then their class
+// or course inside it, then how they travel.
 function describe(u) {
   const inst = INST_SHORT[u.institution || 'RNSIT'];
-  if (inst) return `${inst} · ${VEH[u.vehicle]}`;
+  if (inst) {
+    // A class names its own year ("Grade 8"); a course wants one after it.
+    const where = u.grp ? `${inst} · ${u.grp}${u.year ? ` Y${u.year}` : ''}` : inst;
+    return `${where} · ${VEH[u.vehicle]}`;
+  }
   return `${u.role === 'faculty' ? 'Faculty' : `${deptLabel(u.dept)} Y${u.year}`} · ${VEH[u.vehicle]}`;
 }
 
@@ -103,8 +109,10 @@ async function render(quiet) {
         <div class="place">${esc(z?.name)}</div>
         <div class="muted small">Enter by ${b.gate_id === 'G3' ? 'the Bus Bay Gate' : 'the Main Gate'} · ${VEH[b.vehicle]}</div>
         ${inside ? '' : `
-        <button class="btn block" id="showPass" style="margin-top:12px">Show my pass</button>
-        <button class="btn secondary block" id="cancel" style="margin-top:10px">Cancel, I am not coming</button>`}
+        <div class="btn-row" style="margin-top:12px">
+          <button class="btn" id="showPass">Show my pass</button>
+          <button class="btn secondary" id="cancel">Not coming</button>
+        </div>`}
       </section>`);
   } else if (u.vehicleToday !== 'NONE' && !(cp && !cp.isDriver)) {
     html.push(`

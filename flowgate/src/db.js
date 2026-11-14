@@ -2,7 +2,7 @@
 const path = require('path');
 const fs = require('fs');
 const { DatabaseSync } = require('node:sqlite');
-const { ZONES, GATES, COHORTS, AREAS, DEPARTMENTS, ALL_DEPARTMENTS, INSTITUTIONS } = require('./config');
+const { ZONES, GATES, COHORTS, AREAS, DEPARTMENTS, ALL_DEPARTMENTS, INSTITUTIONS, SCHOOL_PICKER, schoolFor } = require('./config');
 const { runOptimizer } = require('./optimizer');
 
 const DATA_DIR = path.join(__dirname, '..', 'data');
@@ -112,9 +112,9 @@ function seed() {
   }
 
   // put the kept people back, after the seeded ones so ids never collide
-  const insKept = db.prepare(`INSERT INTO users(id, name, usn, role, dept, year, area, vehicle, cohort, institution, added)
-    VALUES (?,?,?,?,?,?,?,?,?,?,1)`);
-  for (const k of kept) insKept.run(id++, k.name, k.usn, k.role, k.dept, k.year, k.area, k.vehicle, k.cohort, k.institution || 'RNSIT');
+  const insKept = db.prepare(`INSERT INTO users(id, name, usn, role, dept, year, area, vehicle, cohort, institution, grp, added)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,1)`);
+  for (const k of kept) insKept.run(id++, k.name, k.usn, k.role, k.dept, k.year, k.area, k.vehicle, k.cohort, k.institution || 'RNSIT', k.grp ?? null);
 
   // fictional number plates ("KA 00" is not a real RTO code) for hands-free entry demos
   db.prepare("UPDATE users SET plate = 'KA00FG' || (1000 + id) WHERE vehicle != 'NONE'").run();
@@ -156,6 +156,9 @@ function init({ reset = false } = {}) {
     db.exec('ALTER TABLE users ADD COLUMN vehicle_today TEXT');
     db.exec('ALTER TABLE users ADD COLUMN vehicle_today_date TEXT');
   }
+  // Which class, stream or course a person is in at a non-engineering institution.
+  // The engineering college uses dept + year instead.
+  if (!cols.includes('grp')) db.exec('ALTER TABLE users ADD COLUMN grp TEXT');
   if (!cols.includes('institution')) {
     db.exec("ALTER TABLE users ADD COLUMN institution TEXT");
     db.exec("UPDATE users SET institution = 'RNSIT' WHERE institution IS NULL"); // everyone seeded is the engineering college
@@ -352,7 +355,12 @@ function addPerson(p) {
   const role = p.role === 'faculty' ? 'faculty' : 'student';
   // Six institutions share this campus, so a person belongs to one of them.
   // Anything unrecognised falls back to the engineering college.
-  const inst = INSTITUTIONS.find((i) => i.id === String(p.institution || '').toUpperCase()) || INSTITUTIONS[0];
+  // 'SCHOOL' is what the form sends: one school, resolved to the junior or senior
+  // bell by the class the child is in.
+  const wanted = String(p.institution || '').toUpperCase();
+  const cls = String(p.grp || '').trim();
+  const instId = wanted === 'SCHOOL' ? schoolFor(SCHOOL_PICKER.classes.includes(cls) ? cls : 'Grade 5') : wanted;
+  const inst = INSTITUTIONS.find((i) => i.id === instId) || INSTITUTIONS[0];
   const isEng = inst.id === 'RNSIT';
   const vehicle = VEHICLES.includes(p.vehicle) ? p.vehicle : '2W';
   const area = AREAS.includes(p.area) ? p.area : AREAS[0];
@@ -361,29 +369,40 @@ function addPerson(p) {
   const dept = isEng ? (ALL_DEPARTMENTS.includes(p.dept) ? p.dept : DEPARTMENTS[0]) : null;
   const year = isEng && role === 'student' ? Math.min(4, Math.max(1, Number(p.year) || 1)) : null;
   const cohort = isEng ? (role === 'student' ? `${dept}-Y${year}` : 'FACULTY') : inst.id;
+  // The others have a course or a class rather than a branch. It labels the person;
+  // it does not change their arrival, which is their institution's bell.
+  let grp = null, grpYear = null;
+  if (!isEng && role === 'student') {
+    if (inst.school) {
+      grp = SCHOOL_PICKER.classes.includes(cls) ? cls : 'Grade 5';
+    } else if (inst.courses) {
+      grp = inst.courses.includes(p.course) ? p.course : inst.courses[0];
+      grpYear = Math.min(inst.years, Math.max(1, Number(p.year) || 1));
+    }
+  }
 
-  const next = (db.prepare('SELECT COALESCE(MAX(id), 0) AS m FROM users').get().m) + 1;
-  const usn = String(p.usn || '').trim().toUpperCase()
-    || (isEng && role === 'student' ? `1RN${String(24 - year).padStart(2, '0')}${dept.slice(0, 2)}${String(900 + next).slice(-3)}`
-      : role === 'faculty' ? `FAC${900 + next}`
-      : `${inst.id.slice(0, 3)}${900 + next}`);
+  // Required. It is the one genuinely unique thing a person has here, and it is
+  // what the gate, the pass and every record are tied to.
+  const usn = String(p.usn || '').trim().toUpperCase();
+  if (!usn) throw new Error('Registration number is required');
   if (db.prepare('SELECT 1 FROM users WHERE usn = ?').get(usn)) throw new Error(`${usn} already exists`);
+  const next = (db.prepare('SELECT COALESCE(MAX(id), 0) AS m FROM users').get().m) + 1;
 
-  db.prepare(`INSERT INTO users(id, name, usn, role, dept, year, area, vehicle, cohort, institution, added, plate)
-    VALUES (?,?,?,?,?,?,?,?,?,?,1,?)`)
-    .run(next, name, usn, role, dept, year, area, vehicle, cohort, inst.id,
+  db.prepare(`INSERT INTO users(id, name, usn, role, dept, year, area, vehicle, cohort, institution, grp, added, plate)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,1,?)`)
+    .run(next, name, usn, role, dept, isEng ? year : grpYear, area, vehicle, cohort, inst.id, grp,
       vehicle === 'NONE' ? null : `KA00FG${1000 + next}`);
   return db.prepare('SELECT * FROM users WHERE id = ?').get(next);
 }
 
-// CSV: name,usn,institution,role,dept,year,vehicle,area  (a header row is optional)
+// CSV: name,usn,institution,role,dept,year,vehicle,area,grp,course  (a header row is optional)
 function importPeople(text) {
   const lines = String(text || '').trim().split(/\r?\n/).filter((l) => l.trim());
   if (!lines.length) throw new Error('Nothing to import');
   const head = lines[0].toLowerCase();
   const cols = /name/.test(head) && /role|dept|vehicle|institution|usn/.test(head)
     ? lines.shift().split(',').map((s) => s.trim().toLowerCase())
-    : ['name', 'usn', 'institution', 'role', 'dept', 'year', 'vehicle', 'area'];
+    : ['name', 'usn', 'institution', 'role', 'dept', 'year', 'vehicle', 'area', 'grp', 'course'];
   const added = []; const failed = [];
   for (const line of lines) {
     const v = line.split(',').map((s) => s.trim());

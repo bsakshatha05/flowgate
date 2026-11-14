@@ -157,52 +157,57 @@ const SEATS_PER_BUS = 50;
 // scooter that rides straight through.
 const INSTITUTIONS = [
   {
-    id: 'RNSIT', name: 'RNS Institute of Technology', kind: 'engineering',
+    id: 'RNSIT', name: 'RNS Institute of Technology', short: 'RNSIT', kind: 'engineering',
     students: 5520, source: 'AICTE', // modelled in detail as COHORTS above
     arrive: '09:00', leave: '16:30', timingSource: 'CONFIRMED',
     mode: { '2W': 0.42, '4W': 0.09, BUS: 0.30, OTHER: 0.19 },
     modelled: 'cohorts',
   },
   {
-    id: 'PG', name: 'RNSIT postgraduate (MBA and MCA)', kind: 'postgraduate',
+    id: 'PG', name: 'RNSIT postgraduate (MBA and MCA)', short: 'RNSIT PG', kind: 'postgraduate',
     students: 720, source: 'AICTE', // MBA 240/yr and MCA 120/yr, two years each
     arrive: '09:30', leave: '17:00',
+    courses: ['MBA', 'MCA'], years: 2,
     mode: { '2W': 0.40, '4W': 0.18, BUS: 0.20, OTHER: 0.22 },
     modelled: 'block',
   },
   {
-    id: 'SCHOOL_SR', name: 'RNS International School, grades 5 to 10', kind: 'school',
+    id: 'SCHOOL_SR', name: 'RNS International School, grades 5 to 10', short: 'RNS School', kind: 'school',
     // [BALLPARK] The school publishes an average class strength of about 35 and a
     // maximum of 40. Grades 5 to 10 is six year groups; at three sections each that
     // is 18 classes, so ~630. Rounded to 700 to stay on the cautious side, since
     // understating the school would understate the problem.
     students: 700, source: 'BALLPARK',
     arrive: '08:00', leave: '15:20', timingSource: 'SCHOOL',
+    classes: ['Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10'], school: true,
     mode: { '2W': 0.04, '4W': 0.34, BUS: 0.60, OTHER: 0.02 },
     modelled: 'block',
   },
   {
-    id: 'SCHOOL_JR', name: 'RNS International School, nursery to grade 4', kind: 'school',
+    id: 'SCHOOL_JR', name: 'RNS International School, nursery to grade 4', short: 'RNS School', kind: 'school',
     // [BALLPARK] Nursery, LKG, UKG and grades 1 to 4: seven year groups, but smaller
     // sections lower down, so ~500 on the same class-size basis.
     students: 500, source: 'BALLPARK',
     arrive: '08:45', leave: '15:20', timingSource: 'SCHOOL',
+    classes: ['Nursery', 'LKG', 'UKG', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4'], school: true,
     mode: { '2W': 0.03, '4W': 0.42, BUS: 0.53, OTHER: 0.02 },
     modelled: 'block',
   },
   {
-    id: 'PUC', name: 'RNS PU College', kind: 'pre-university',
+    id: 'PUC', name: 'RNS PU College', short: 'RNS PU College', kind: 'pre-university',
     // [BALLPARK] Directory listings show roughly 100 to 120 seats per stream per year
     // across science and commerce. Two years, two or three streams: ~480.
     students: 480, source: 'BALLPARK',
     arrive: '08:30', leave: '16:00', timingSource: 'CONFIRMED',
+    courses: ['Science', 'Commerce'], years: 2, yearNames: ['I PUC', 'II PUC'],
     mode: { '2W': 0.30, '4W': 0.14, BUS: 0.40, OTHER: 0.16 },
     modelled: 'block',
   },
   {
-    id: 'DEGREE', name: 'RNS First Grade College', kind: 'degree',
+    id: 'DEGREE', name: 'RNS First Grade College', short: 'RNS Degree College', kind: 'degree',
     students: 1018, source: 'PUBLISHED', // strength listed on college directories
     arrive: '09:00', leave: '16:00',
+    courses: ['BCom', 'BBA', 'BCA', 'BSc', 'BA'], years: 3,
     mode: { '2W': 0.34, '4W': 0.10, BUS: 0.34, OTHER: 0.22 },
     modelled: 'block',
   },
@@ -214,6 +219,21 @@ const INSTITUTIONS = [
 // during school drop-off, so no gate penalty is applied. See src/simulator.js.
 const DROPOFF_GATE_COST = 2.2;
 
+// The form shows one school. Which of the two modelled entries a child belongs to
+// follows from their class, so nobody has to know the split exists.
+const SCHOOL_PICKER = {
+  id: 'SCHOOL', name: 'RNS International School', short: 'RNS School', kind: 'school',
+  // The junior and senior bells differ by 45 minutes, so the form has to answer
+  // "arrives when?" from the class, not from the school.
+  arrive: '08:00', juniorArrive: '08:45',
+  classes: ['Nursery', 'LKG', 'UKG', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4',
+    'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10'],
+  juniorClasses: ['Nursery', 'LKG', 'UKG', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4'],
+};
+// Nursery through grade 4 is the 08:45 bell; grade 5 up is the 08:00 one.
+const JUNIOR_CLASSES = new Set(['Nursery', 'LKG', 'UKG', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4']);
+function schoolFor(cls) { return JUNIOR_CLASSES.has(cls) ? 'SCHOOL_JR' : 'SCHOOL_SR'; }
+
 const AREAS = [
   'RR Nagar', 'Kengeri', 'Uttarahalli', 'Banashankari', 'Jayanagar',
   'Vijayanagar', 'Mysore Road', 'Channasandra', 'BSK 3rd Stage', 'Nagarbhavi',
@@ -221,5 +241,5 @@ const AREAS = [
 
 module.exports = {
   CAMPUS, GATES, LANE_SPLIT, ZONES, DEPARTMENTS, TEACH_OUT_DEPARTMENTS, ALL_DEPARTMENTS, DEPARTMENT_NAMES, COHORTS, MODE_SHARE, FACULTY, BUS_FLEET, SEATS_PER_BUS, AREAS,
-  ARRIVAL_SPREAD_MIN, DAILY_ATTENDANCE, INSTITUTIONS, DROPOFF_GATE_COST,
+  ARRIVAL_SPREAD_MIN, DAILY_ATTENDANCE, INSTITUTIONS, DROPOFF_GATE_COST, SCHOOL_PICKER, schoolFor,
 };
