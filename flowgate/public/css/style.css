@@ -262,6 +262,24 @@ a.feature:hover b { color: var(--brand); }
 .simbar-end { margin-left: auto; }
 @media (max-width: 900px) { .simbar-end { margin-left: 0; } }
 
+/* Type-to-find picker. A native select listing sixty people covers the whole
+   screen and is painful on a phone, so this filters as you type and never shows
+   more than a handful at once. */
+.picker { position: relative; }
+.picker-list {
+  position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 20;
+  list-style: none; margin: 0; padding: 4px; max-height: 320px; overflow: auto;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; box-shadow: var(--shadow);
+}
+.picker-list li {
+  display: flex; flex-direction: column; gap: 2px; padding: 10px 12px;
+  border-radius: 8px; cursor: pointer;
+}
+.picker-list li:hover, .picker-list li.on { background: var(--surface-2); }
+.picker-list li[aria-disabled] { cursor: default; }
+.picker-list li[aria-disabled]:hover { background: transparent; }
+
 /* Segmented control: for two or three choices where a dropdown would hide one of
    them behind a tap. Both options are visible, and the active one is obvious from
    across a gate. */

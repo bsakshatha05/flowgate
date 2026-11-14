@@ -356,7 +356,7 @@ function fillPersonOptions() {
   const out = CFG.teachOut || [];
   const dn = CFG.deptNames || {};
   $('#pDept').innerHTML = (CFG.depts || []).map((d) =>
-    `<option value="${d}">${esc(dn[d] || d)}${out.includes(d) ? ' · final years only' : ''}</option>`).join('');
+    `<option value="${d}">${esc(dn[d] || d)}${out.includes(d) ? ' · no new admissions' : ''}</option>`).join('');
   $('#pArea').innerHTML = (CFG.areas || []).map((a) => `<option>${a}</option>`).join('');
   $('#pInst').innerHTML = (CFG.institutions || []).map((i) => `<option value="${i.id}">${esc(i.name)}</option>`).join('');
   syncPersonForm();
@@ -371,10 +371,12 @@ function syncPersonForm() {
   $('#pDeptWrap').style.display = isEng ? '' : 'none';
   $('#pYearWrap').style.display = isEng && pRole === 'student' ? '' : 'none';
   $('#pInstHint').textContent = isEng
-    ? 'Gets a staggered arrival slot from the timetable.'
-    : `Arrives for the ${inst.arrive} start. FlowGate does not move this one, it works around it.`;
+    ? 'Pick the branch below. Gets a staggered arrival slot from the timetable.'
+    : `Arrives for the ${inst.arrive} start. No branch needed, and FlowGate does not move this one, it works around it.`;
 }
 $('#pInst')?.addEventListener('change', syncPersonForm);
+
+const VEHICLE_LABEL = { '2W': 'Two-wheeler', '4W': 'Car', NONE: 'Walks' };
 
 // What to show in the Class column: engineering people have a department and a
 // year, everyone else is identified by their institution.
@@ -394,7 +396,7 @@ async function loadPeople() {
       <td><b>${esc(p.name)}</b></td>
       <td class="mono">${esc(p.usn)}</td>
       <td>${esc(personWhere(p))}</td>
-      <td>${p.vehicle === 'NONE' ? 'Walks' : p.vehicle}</td>
+      <td>${VEHICLE_LABEL[p.vehicle] || p.vehicle}</td>
       <td><button class="btn sm secondary" data-remove="${p.id}">Remove</button></td>
     </tr>`).join('')
     : '<tr><td colspan="5" class="muted">Nobody added yet. The 60 demo people are still there.</td></tr>';
@@ -404,12 +406,12 @@ $('#personForm')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   try {
     const r = await api('/api/admin/people', {
-      name: $('#pName').value, role: pRole, institution: $('#pInst').value,
+      name: $('#pName').value, usn: $('#pUsn').value, role: pRole, institution: $('#pInst').value,
       dept: $('#pDept').value, year: Number($('#pYear').value),
       vehicle: pVehicle, area: $('#pArea').value,
     });
     toast(`${r.person.name} added as ${r.person.usn}`);
-    $('#pName').value = ''; $('#pName').focus();
+    $('#pName').value = ''; $('#pUsn').value = ''; $('#pName').focus();
     loadPeople();
   } catch (err) { toast(err.message); }
 });

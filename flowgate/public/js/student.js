@@ -3,17 +3,71 @@ let userId = null;
 const STATUS = { booked: ['Reserved', 'brand'], checked_in: ['On campus', 'ok'], checked_out: ['Exited', ''] };
 const VEH = { '2W': 'Two-wheeler', '4W': 'Car', NONE: 'No vehicle' };
 
+// Branch codes are how students refer to themselves, so they stay short here.
+// AIDS is the exception: nobody should read that word in a list of people.
+const deptLabel = (d) => (d === 'AIDS' ? 'AI&DS' : d);
+const INST_SHORT = {
+  RNSIT: '', PG: 'MBA/MCA', SCHOOL_SR: 'School', SCHOOL_JR: 'School',
+  PUC: 'PU College', DEGREE: 'Degree College',
+};
+
+function describe(u) {
+  const inst = INST_SHORT[u.institution || 'RNSIT'];
+  if (inst) return `${inst} · ${VEH[u.vehicle]}`;
+  return `${u.role === 'faculty' ? 'Faculty' : `${deptLabel(u.dept)} Y${u.year}`} · ${VEH[u.vehicle]}`;
+}
+
 async function init() {
   const users = await api('/api/users');
-  const sel = $('#who');
-  // Branch codes are how students refer to themselves, so they stay short here.
-  // AIDS is the exception: nobody should read that word in a list of people.
-  const deptLabel = (d) => (d === 'AIDS' ? 'AI&DS' : d);
-  sel.innerHTML = users.map((u) => `<option value="${u.id}">${esc(u.name)} · ${u.role === 'faculty' ? 'Faculty' : `${deptLabel(u.dept)} Y${u.year}`} · ${VEH[u.vehicle]}</option>`).join('');
+  const input = $('#whoSearch'), list = $('#whoList');
+
+  // A dropdown of sixty-odd names fills the screen and is miserable to use on a
+  // phone. Type a few letters instead; the list stays short.
+  function show(filter = '') {
+    const q = filter.trim().toLowerCase();
+    const hits = users
+      .filter((u) => !q || u.name.toLowerCase().includes(q) || (u.usn || '').toLowerCase().includes(q)
+        || (u.dept || '').toLowerCase().includes(q))
+      .slice(0, 8);
+    list.innerHTML = hits.length
+      ? hits.map((u) => `<li role="option" data-id="${u.id}" ${u.id === userId ? 'aria-selected="true" class="on"' : ''}>
+          <b>${esc(u.name)}</b><span class="small muted">${esc(describe(u))}</span></li>`).join('')
+      : '<li class="muted small" aria-disabled="true">Nobody by that name</li>';
+    list.classList.remove('hidden');
+    input.setAttribute('aria-expanded', 'true');
+  }
+  function hide() { list.classList.add('hidden'); input.setAttribute('aria-expanded', 'false'); }
+  function pick(id) {
+    userId = Number(id);
+    const u = users.find((x) => x.id === userId);
+    input.value = u.name;
+    $('#whoHint').textContent = describe(u);
+    try { localStorage.setItem('fg-user', userId); } catch (_) { /* private mode */ }
+    hide(); render();
+  }
+
   let saved = null; try { saved = localStorage.getItem('fg-user'); } catch {}
-  userId = Number(saved && users.some((u) => u.id === Number(saved)) ? saved : users.find((u) => u.vehicle === '2W' && u.role === 'student').id);
-  sel.value = userId;
-  sel.onchange = () => { userId = Number(sel.value); try { localStorage.setItem('fg-user', userId); } catch {} render(); };
+  const start = (saved && users.find((u) => u.id === Number(saved)))
+    || users.find((u) => u.vehicle === '2W' && u.role === 'student') || users[0];
+  userId = start.id;
+  input.value = start.name;
+  $('#whoHint').textContent = describe(start);
+
+  input.addEventListener('focus', () => { input.select(); show(''); });
+  input.addEventListener('input', () => show(input.value));
+  list.addEventListener('mousedown', (e) => { // mousedown, so it fires before blur
+    const li = e.target.closest('[data-id]'); if (li) { e.preventDefault(); pick(li.dataset.id); }
+  });
+  input.addEventListener('blur', () => setTimeout(() => {
+    hide();
+    const u = users.find((x) => x.id === userId);
+    if (u) input.value = u.name; // never leave a half-typed name in the box
+  }, 120));
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { hide(); input.blur(); }
+    if (e.key === 'Enter') { const first = list.querySelector('[data-id]'); if (first) { e.preventDefault(); pick(first.dataset.id); } }
+  });
+
   render();
   stream({ live: () => render(true), notice: showNotice });
 }

@@ -337,8 +337,17 @@ const fmtPlate = (p) => (p ? `${p.slice(0, 2)} ${p.slice(2, 4)} ${p.slice(4, 6)}
 
 const VEHICLES = ['2W', '4W', 'NONE'];
 
+// Tidy a typed name without mangling it. Only all-lowercase words get a capital,
+// so "abhi" becomes "Abhi" while "McDonald" and "d'Souza" are left alone.
+function tidyName(raw) {
+  return String(raw || '').trim().replace(/\s+/g, ' ').slice(0, 60)
+    .split(' ')
+    .map((w) => (w && w === w.toLowerCase() ? w[0].toUpperCase() + w.slice(1) : w))
+    .join(' ');
+}
+
 function addPerson(p) {
-  const name = String(p.name || '').trim().slice(0, 60);
+  const name = tidyName(p.name);
   if (!name) throw new Error('Name is required');
   const role = p.role === 'faculty' ? 'faculty' : 'student';
   // Six institutions share this campus, so a person belongs to one of them.
@@ -367,14 +376,14 @@ function addPerson(p) {
   return db.prepare('SELECT * FROM users WHERE id = ?').get(next);
 }
 
-// CSV: name,institution,role,dept,year,vehicle,area  (a header row is optional)
+// CSV: name,usn,institution,role,dept,year,vehicle,area  (a header row is optional)
 function importPeople(text) {
   const lines = String(text || '').trim().split(/\r?\n/).filter((l) => l.trim());
   if (!lines.length) throw new Error('Nothing to import');
   const head = lines[0].toLowerCase();
-  const cols = /name/.test(head) && /role|dept|vehicle|institution/.test(head)
+  const cols = /name/.test(head) && /role|dept|vehicle|institution|usn/.test(head)
     ? lines.shift().split(',').map((s) => s.trim().toLowerCase())
-    : ['name', 'institution', 'role', 'dept', 'year', 'vehicle', 'area'];
+    : ['name', 'usn', 'institution', 'role', 'dept', 'year', 'vehicle', 'area'];
   const added = []; const failed = [];
   for (const line of lines) {
     const v = line.split(',').map((s) => s.trim());

@@ -9,8 +9,13 @@
 <body>
   <main class="wrap narrow">
     <div class="card" style="margin-bottom:16px">
-      <label for="who">Signed in as (demo login)</label>
-      <select id="who"></select>
+      <label for="whoSearch">Signed in as (demo login)</label>
+      <div class="picker">
+        <input id="whoSearch" autocomplete="off" placeholder="Start typing a name" aria-label="Search for a person"
+               role="combobox" aria-expanded="false" aria-controls="whoList">
+        <ul id="whoList" class="picker-list hidden" role="listbox"></ul>
+      </div>
+      <p class="small muted" id="whoHint" style="margin:8px 2px 0"></p>
     </div>
     <div id="app" class="grid"></div>
   </main>
