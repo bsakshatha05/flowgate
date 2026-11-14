@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FlowGate Gate Scanner</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <main class="wrap">
+    <div class="grid g2">
+      <section class="grid" style="align-content:start">
+        <div class="card">
+          <div class="row">
+            <div>
+              <span class="lbl">This device is at</span>
+              <div class="seg" id="gate" role="radiogroup" aria-label="This device is at">
+                <button type="button" role="radio" aria-checked="true" data-gate="G1" class="on">Main Gate</button>
+                <button type="button" role="radio" aria-checked="false" data-gate="G3">Bus Bay</button>
+              </div>
+              <p class="small muted" style="margin:8px 2px 0">Every vehicle enters and leaves by the Main Gate. College buses have their own entrance.</p>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Scan QR pass</h2><button class="btn sm secondary" id="camBtn">Start camera</button></div>
+          <video id="cam" class="hidden" playsinline muted></video>
+          <canvas id="frame" class="hidden"></canvas>
+          <p class="muted small" id="camMsg">Point the camera at the student's QR, or type the code below.</p>
+          <form class="row" id="manual" style="margin-top:8px">
+            <input id="code" placeholder="FG-XXXXXX" autocomplete="off" class="mono" />
+            <button class="btn auto">Check</button>
+          </form>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Plate camera (hands-free)</h2><span class="pill warn">Simulated read</span></div>
+          <div class="row"><select id="plateSel" aria-label="Number plate"></select><button class="btn auto" id="plateBtn">Simulate plate read</button></div>
+          <p class="small muted" style="margin:8px 0 0">In production an ANPR camera posts each plate it reads to <span class="mono">/api/gate/plate</span>. Here you pick a plate to stand in for that read.</p>
+        </div>
+        <div id="result"></div>
+      </section>
+      <section class="card">
+        <div class="card-head"><h2>Today's passes</h2><span class="pill">Demo: tap to simulate a scan</span></div>
+        <div class="table-wrap" style="max-height:620px"><table><thead><tr><th>Name</th><th>Code</th><th>Gate</th><th>Status</th><th></th></tr></thead><tbody id="passes"></tbody></table></div>
+      </section>
+    </div>
+  </main>
+  <script src="/lib/jsQR.js"></script>
+  <script src="/js/common.js"></script>
+  <script src="/js/gate.js"></script>
+</body>
+</html>

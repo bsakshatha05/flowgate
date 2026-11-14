@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FlowGate</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero" style="padding-bottom:0">
+      <span class="pill brand">Smart campus traffic for RNSIT</span>
+      <h1 style="margin-top:14px">Stop everyone arriving<br>at the same minute.</h1>
+      <p style="max-width:640px">The gates do not jam because the road is too small. They jam because
+        almost everyone arrives in the same fifteen minutes. FlowGate spreads arrivals out, then sends
+        each vehicle straight to a known space.</p>
+    </section>
+
+    <nav class="nav-cards">
+      <a class="nav-card" href="/student"><b>Student app</b><span>Your arrival slot, parking, QR pass, carpools</span><span class="go">Open</span></a>
+      <a class="nav-card" href="/gate"><b>Gate scanner</b><span>What the guard uses to scan people in</span><span class="go">Open</span></a>
+      <a class="nav-card" href="/admin"><b>Control room</b><span>Live map, alerts, peak-hour simulation</span><span class="go">Open</span></a>
+    </nav>
+
+    <section class="proof">
+      <div class="tag">MEASURED AT OUR OWN GATE · 13 NOVEMBER 2026</div>
+      <div class="nums">
+        <div class="n">147<small>vehicles in 5.8 min</small></div>
+        <div class="n">82%<small>two-wheelers</small></div>
+        <div class="n" style="color:var(--brand-2)">33<small>in the busiest minute</small></div>
+      </div>
+      <p>We filmed our main gate during the morning peak and counted it with the YOLOv8 script in
+        this project. Then a person counted the same 30 seconds by hand: 20 vehicles against the
+        software's 19, so the counts are good to about 5%. At peak a vehicle passes every 1.8
+        seconds, which is why nothing in FlowGate asks a vehicle to stop at the gate.
+        Method and limits: <span class="mono">docs/measured/</span></p>
+    </section>
+
+    <div class="section-head"><h2>What it does</h2><span>six parts, one system</span></div>
+    <section class="features">
+      <div class="feature"><b>Staggered slots</b><span>Each class gets its own ten-minute arrival window, built from the timetable</span></div>
+      <div class="feature"><b>Predictive control</b><span>Forecasts queues twenty minutes ahead and acts before one forms</span></div>
+      <div class="feature"><b>Parking and passes</b><span>Book a space before leaving home; the pass is checked at the parking area, not the gate</span></div>
+      <div class="feature"><b>Green credits</b><span>Points for arriving on time and carpooling unlock priority parking</span></div>
+      <a class="feature" href="/sign"><b>Gate signage</b><span>A screen at the gate: which gate to use, waits, free spaces, crossing signals</span></a>
+      <div class="feature"><b>Copilot</b><span>Security asks questions in plain English and gets a shift report</span></div>
+    </section>
+
+    <div class="section-head"><h2>What the model predicts</h2><span>simulated, using assumed figures</span></div>
+    <section class="grid g4" style="margin-top:10px" id="impact"></section>
+    <p class="foot-note">These four come from the built-in simulator, not from measurement. The assumptions
+      live in <span class="mono">src/config.js</span>. The measured numbers above are the real ones.</p>
+  </main>
+  <script src="/js/common.js"></script>
+  <script>
+    topbar('/');
+    api('/api/sim/compare').then((c) => {
+      const b = c.baseline, f = c.flowgate;
+      const kpis = [
+        ['Peak gate queue', `${b.peakQueue}`, `${f.peakQueue}`, 'vehicles'],
+        ['Worst wait at gate', `${b.maxWaitMin}`, `${f.maxWaitMin}`, 'minutes'],
+        ['Queue on main road', `${b.spillbackMinutes}`, `${f.spillbackMinutes}`, 'minutes per morning'],
+        ['Pedestrian conflict', `${b.peakConflict}`, `${f.peakConflict}`, 'peak index'],
+      ];
+      $('#impact').innerHTML = kpis.map(([l, x, y, u]) => `
+        <div class="card kpi"><div class="label">${l}</div>
+        <div class="compare-num"><s>${x}</s>${y}</div><div class="sub">${u}: today vs with FlowGate</div></div>`).join('');
+    });
+  </script>
+</body>
+</html>

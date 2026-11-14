@@ -1,0 +1,16 @@
+<section id="tech">
+<p class="eyebrow">HOW IT’S BUILT</p>
+<h2>Runs on one laptop, today</h2>
+<table class="tbl" style="font-size:24px">
+<tr><th style="width:24%">Layer</th><th style="width:36%">What we used</th><th style="width:40%">Why</th></tr>
+<tr><td>Server</td><td>Node.js, no packages for the core</td><td>One command to start, works offline</td></tr>
+<tr><td>Database</td><td>SQLite, built into Node</td><td>A single file, easy to back up</td></tr>
+<tr><td>Live updates</td><td>Server-Sent Events</td><td>Dashboards update with no refresh</td></tr>
+<tr><td>Web apps</td><td>HTML, CSS, JavaScript, Chart.js</td><td>Works in any phone browser</td></tr>
+<tr><td>QR passes</td><td>qrcode-generator, jsQR</td><td>Scan by camera, code or one tap</td></tr>
+<tr><td>Vehicle counting</td><td>YOLOv8 + ByteTrack (Python)</td><td>Uses existing CCTV feeds</td></tr>
+<tr><td>Slots, forecast, simulation</td><td>Our own models in JavaScript</td><td>Seeded, so results repeat exactly</td></tr>
+<tr><td>Copilot (optional)</td><td>Claude API, offline fallback</td><td>Plain-English answers, aggregates only</td></tr>
+</table>
+<aside>The core runs locally with one command: no cloud account, no install step, no Wi-Fi needed. The copilot can use Claude when a key and internet are available and falls back to offline rules otherwise. The camera counter is a separate Python script that posts counts to the same API, so any CCTV feed can plug in.</aside>
+</section>

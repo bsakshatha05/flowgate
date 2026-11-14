@@ -1,0 +1,196 @@
+{
+  "clips": [
+    {
+      "source": "VID20261113084444.mp4",
+      "start": "08:44:44",
+      "seconds": 83.9,
+      "totals": {
+        "VEH": 27,
+        "4W": 4,
+        "4W_A": 4,
+        "2W": 20,
+        "2W_A": 20,
+        "PED": 40,
+        "PED_A": 34,
+        "PED_B": 6,
+        "BUS": 3,
+        "BUS_A": 3
+      },
+      "rate": {
+        "mean": 17,
+        "peak": 17,
+        "minutes_counted": 1
+      }
+    },
+    {
+      "source": "VID20261113084653.mp4",
+      "start": "08:46:53",
+      "seconds": 199.2,
+      "totals": {
+        "PED": 187,
+        "PED_A": 165,
+        "VEH": 90,
+        "2W": 67,
+        "2W_A": 64,
+        "PED_B": 22,
+        "4W": 16,
+        "4W_B": 1,
+        "2W_B": 3,
+        "4W_A": 15,
+        "BUS": 7,
+        "BUS_A": 7
+      },
+      "rate": {
+        "mean": 27.3,
+        "peak": 33,
+        "minutes_counted": 3
+      }
+    },
+    {
+      "source": "VID20261113085312.mp4",
+      "start": "08:53:12",
+      "seconds": 62.4,
+      "totals": {
+        "VEH": 36,
+        "2W": 34,
+        "2W_A": 32,
+        "PED": 94,
+        "PED_A": 91,
+        "PED_B": 3,
+        "4W": 2,
+        "4W_A": 2,
+        "2W_B": 2
+      },
+      "rate": {
+        "mean": 18,
+        "peak": 33,
+        "minutes_counted": 2
+      }
+    }
+  ],
+  "overall": {
+    "minutes_analysed": 5.76,
+    "vehicles": 153,
+    "two_wheelers": 121,
+    "cars": 22,
+    "buses": 10,
+    "pedestrians": 321,
+    "mean_vehicles_per_min": 26.6,
+    "peak_minute_vehicles": 33,
+    "peak_minute_clock": "08:48",
+    "pedestrians_per_min": 55.7,
+    "two_wheeler_share": 0.791
+  },
+  "per_minute": [
+    {
+      "src": "VID20261113084444.mp4",
+      "minute": "08:44",
+      "vehicles": 7,
+      "2W": 6,
+      "4W": 1,
+      "BUS": 0,
+      "pedestrians": 11,
+      "veh_dirA": 7,
+      "veh_dirB": 0
+    },
+    {
+      "src": "VID20261113084444.mp4",
+      "minute": "08:45",
+      "vehicles": 17,
+      "2W": 11,
+      "4W": 3,
+      "BUS": 3,
+      "pedestrians": 26,
+      "veh_dirA": 17,
+      "veh_dirB": 0
+    },
+    {
+      "src": "VID20261113084444.mp4",
+      "minute": "08:46",
+      "vehicles": 3,
+      "2W": 3,
+      "4W": 0,
+      "BUS": 0,
+      "pedestrians": 3,
+      "veh_dirA": 3,
+      "veh_dirB": 0
+    },
+    {
+      "src": "VID20261113084653.mp4",
+      "minute": "08:46",
+      "vehicles": 1,
+      "2W": 1,
+      "4W": 0,
+      "BUS": 0,
+      "pedestrians": 8,
+      "veh_dirA": 1,
+      "veh_dirB": 0
+    },
+    {
+      "src": "VID20261113084653.mp4",
+      "minute": "08:47",
+      "vehicles": 19,
+      "2W": 11,
+      "4W": 6,
+      "BUS": 2,
+      "pedestrians": 52,
+      "veh_dirA": 17,
+      "veh_dirB": 2
+    },
+    {
+      "src": "VID20261113084653.mp4",
+      "minute": "08:48",
+      "vehicles": 33,
+      "2W": 27,
+      "4W": 3,
+      "BUS": 3,
+      "pedestrians": 56,
+      "veh_dirA": 32,
+      "veh_dirB": 1
+    },
+    {
+      "src": "VID20261113084653.mp4",
+      "minute": "08:49",
+      "vehicles": 30,
+      "2W": 22,
+      "4W": 6,
+      "BUS": 2,
+      "pedestrians": 62,
+      "veh_dirA": 30,
+      "veh_dirB": 0
+    },
+    {
+      "src": "VID20261113084653.mp4",
+      "minute": "08:50",
+      "vehicles": 7,
+      "2W": 6,
+      "4W": 1,
+      "BUS": 0,
+      "pedestrians": 9,
+      "veh_dirA": 6,
+      "veh_dirB": 1
+    },
+    {
+      "src": "VID20261113085312.mp4",
+      "minute": "08:53",
+      "vehicles": 33,
+      "2W": 32,
+      "4W": 1,
+      "BUS": 0,
+      "pedestrians": 75,
+      "veh_dirA": 31,
+      "veh_dirB": 2
+    },
+    {
+      "src": "VID20261113085312.mp4",
+      "minute": "08:54",
+      "vehicles": 3,
+      "2W": 2,
+      "4W": 1,
+      "BUS": 0,
+      "pedestrians": 19,
+      "veh_dirA": 3,
+      "veh_dirB": 0
+    }
+  ]
+}

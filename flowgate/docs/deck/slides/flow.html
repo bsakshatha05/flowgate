@@ -1,0 +1,21 @@
+<section id="flow" class="dark">
+<p class="eyebrow">HOW IT WORKS</p>
+<h2>From timetable to gate in five steps</h2>
+<div class="flow" style="gap:10px">
+<div class="step rise" style="--i:1"><p class="k">1</p><p class="t">Timetable in</p><p class="d">Admin uploads class timings for each department and year.</p></div>
+<x-shape kind="arrow-right" class="arrow" style="width:56px; height:28px"></x-shape>
+<div class="step rise" style="--i:2"><p class="k">2</p><p class="t">Slot optimizer</p><p class="d">Spreads arrivals into 10-minute windows under gate capacity.</p></div>
+<x-shape kind="arrow-right" class="arrow" style="width:56px; height:28px"></x-shape>
+<div class="step rise" style="--i:3"><p class="k">3</p><p class="t">Student app</p><p class="d">Shows the slot, books a parking zone and issues a QR pass.</p></div>
+<x-shape kind="arrow-right" class="arrow" style="width:56px; height:28px"></x-shape>
+<div class="step rise" style="--i:4"><p class="k">4</p><p class="t">Gate scan</p><p class="d">The guard scans the QR and the driver is sent to their zone.</p></div>
+<x-shape kind="arrow-right" class="arrow" style="width:56px; height:28px"></x-shape>
+<div class="step rise" style="--i:5"><p class="k">5</p><p class="t">Control room</p><p class="d">Live occupancy, gate flow, alerts and peak-hour simulation.</p></div>
+</div>
+<div class="feed rise" style="--i:6">
+<p class="pill">Gate cameras: YOLOv8 counts every vehicle</p>
+<x-shape kind="arrow-right" class="arrow" style="width:56px; height:28px"></x-shape>
+<p class="pill">Same API as QR scans, live in step 5</p>
+</div>
+<aside>The whole loop. The college uploads the timetable, our optimizer turns it into slots, students see their slot and book parking, the guard scans the pass, and the control room sees everything live. Gate cameras are a second data source: a YOLO model counts every vehicle, including people who didn’t use the app.</aside>
+</section>

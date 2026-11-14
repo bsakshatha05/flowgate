@@ -1,0 +1,19 @@
+<section id="predict" class="dark" style="gap:28px">
+<p class="eyebrow">WHEN THE DAY GOES WRONG</p>
+<h2>Predict the queue, act before it forms</h2>
+<div class="split" style="align-items:flex-start">
+<div class="col" style="gap:24px">
+<div class="point rise" style="--i:1"><p class="h"><span class="time">08:15</span> Gate cut to one lane</p><p class="b">A breakdown in the gate mouth, in the rain, with only 60% keeping their slot. There is one vehicle gate, so there is nowhere to divert to.</p></div>
+<div class="point rise" style="--i:2"><p class="h"><span class="time">08:15</span> Forecast fires</p><p class="b">From bookings and the reported incident alone, it sees the queue coming and sends a marshal at once, four minutes before a reactive system would react.</p></div>
+<div class="point rise" style="--i:3"><p class="h">Riders who haven’t left get a nudge</p><p class="b">If the forecast still runs hot, the app moves riders into the minutes that genuinely have room, earlier or later, never past 08:50.</p></div>
+<table class="tbl rise" style="--i:4; font-size:24px">
+<tr><th style="width:40%">Stress day</th><th style="width:20%">Today</th><th style="width:20%">Reactive</th><th style="width:20%">Predict</th></tr>
+<tr><td>Peak queue</td><td>919</td><td>196</td><td>56</td></tr>
+<tr><td>Road spillback</td><td>56 min</td><td>28 min</td><td>11 min</td></tr>
+<tr><td>Marshal sent</td><td>never</td><td>08:19</td><td>08:15</td></tr>
+</table>
+</div>
+<img class="shot" src="/_blob/a260998d981f63aebe405b02c399b17a" alt="The simulation after a completed stress-day run with prediction on: peak gate queue 56 vehicles, worst wait 2 minutes, 11 minutes of spillback onto the road, against 919 and 32.8 minutes without FlowGate" style="width:825px; height:560px">
+</div>
+<aside>Slots handle a normal day. The real test is a bad day: rain, people ignoring their slot, and a gate blocked by an incident. Reactive FlowGate only sends a marshal at 08:19, once the queue is forming. The predictive controller acts at 08:15. It forecasts only from bookings and the reported incident, never the true demand. The nudge is now deliberately small: it only drains minutes that are actually over capacity, and only into minutes with real room. On this day it moves 58 riders, and the peak is the same with or without it, so almost all of the gain comes from the second lane and from sending the marshal early. Four minutes of warning is worth 140 vehicles here, because with one gate there is nowhere to divert to. All simulated, with the assumptions in src/config.js.</aside>
+</section>

@@ -1,0 +1,19 @@
+{
+  "name": "flowgate",
+  "version": "1.0.0",
+  "description": "Smart campus traffic management for RNSIT: staggered slots, predictive gate control, parking pre-booking, QR and plate entry, carpools, green credits, gate signage and a live control room.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "reset": "node server.js --reset",
+    "fake-camera": "python3 yolo/fake_camera.py --gate G1",
+    "doctor": "node scripts/doctor.js"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "license": "MIT",
+  "optionalDependencies": {
+    "@anthropic-ai/sdk": "^1.8.0"
+  }
+}

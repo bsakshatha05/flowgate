@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FlowGate Signage</title>
+  <style>
+    :root { --bg: #070b16; --panel: #111a33; --line: #22305c; --text: #f3f5ff; --muted: #9aa6c9; --ok: #34d399; --warn: #fbbf24; --bad: #f87171; --brand: #818cf8; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body { background: var(--bg); color: var(--text); font: 16px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif; display: flex; flex-direction: column; padding: 2.5vmin; gap: 2.5vmin; }
+    header { display: flex; align-items: center; gap: 2vmin; }
+    .mark { width: 6vmin; height: 6vmin; border-radius: 1.5vmin; background: linear-gradient(135deg, #4f46e5, #0f8f83); display: grid; place-items: center; font-size: 3.5vmin; font-weight: 800; }
+    h1 { margin: 0; font-size: 4vmin; }
+    .clock { margin-left: auto; text-align: right; }
+    .clock b { font-size: 5vmin; font-variant-numeric: tabular-nums; }
+    .tag { display: inline-block; padding: .3vmin 1.2vmin; border-radius: 99px; background: #3a2c0b; color: var(--warn); font-size: 1.8vmin; font-weight: 700; }
+    .emergency { display: none; background: var(--bad); color: #1b0606; border-radius: 2vmin; padding: 2.5vmin; text-align: center; font-size: 5vmin; font-weight: 900; animation: pulse 1.2s ease-in-out infinite alternate; }
+    .emergency.on { display: block; }
+    @keyframes pulse { from { opacity: 1; } to { opacity: .72; } }
+    .reco { background: var(--panel); border: .3vmin solid var(--line); border-radius: 2.5vmin; padding: 3vmin; display: flex; align-items: center; gap: 4vmin; }
+    .reco .arrow { font-size: 14vmin; line-height: 1; color: var(--ok); }
+    .reco .label { font-size: 2.6vmin; color: var(--muted); font-weight: 600; }
+    .reco .gate { font-size: 9vmin; font-weight: 900; letter-spacing: -.02em; }
+    .reco .wait { font-size: 3.4vmin; color: var(--muted); }
+    .gates { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.5vmin; flex: 1; }
+    .g { background: var(--panel); border: .3vmin solid var(--line); border-radius: 2.5vmin; padding: 2.5vmin; display: flex; flex-direction: column; gap: 1vmin; }
+    .g .name { font-size: 3vmin; font-weight: 700; }
+    .g .state { font-size: 6vmin; font-weight: 900; }
+    .g .sub { font-size: 2.6vmin; color: var(--muted); }
+    .ok { color: var(--ok); } .warn { color: var(--warn); } .bad { color: var(--bad); }
+    footer { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2.5vmin; }
+    .f { background: var(--panel); border: .3vmin solid var(--line); border-radius: 2.5vmin; padding: 2vmin 2.5vmin; }
+    .f .k { font-size: 2.2vmin; color: var(--muted); font-weight: 600; }
+    .f .v { font-size: 4.6vmin; font-weight: 800; }
+    .walk { font-size: 4.6vmin; font-weight: 900; }
+    @media (max-width: 700px) { .gates, footer { grid-template-columns: 1fr; } body { font-size: 14px; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="mark">⇄</div>
+    <div><h1>RNSIT gate information</h1><span class="tag" id="feedTag">SIMULATED FEED</span></div>
+    <div class="clock"><div class="small" style="color:var(--muted);font-size:2vmin" id="dayLbl"></div><b id="clock">--:--</b></div>
+  </header>
+  <div class="emergency" id="emergency" role="alert"></div>
+  <section class="reco" aria-live="polite">
+    <div class="arrow" id="arrow">→</div>
+    <div><div class="label">DRIVERS ARRIVING NOW, USE</div><div class="gate" id="recoGate">...</div><div class="wait" id="recoWait"></div></div>
+  </section>
+  <section class="gates" id="gates"></section>
+  <footer>
+    <div class="f"><div class="k">TWO-WHEELER PARKING FREE</div><div class="v" id="free2">...</div></div>
+    <div class="f"><div class="k">CAR PARKING FREE</div><div class="v" id="free4">...</div></div>
+    <div class="f"><div class="k">PEDESTRIANS AT MAIN GATE</div><div class="walk" id="walk">...</div></div>
+  </footer>
+  <script src="/js/common.js"></script>
+  <script>
+    const ARROW = { G1: '↑', G3: '→' };
+    function renderSim(st) {
+      $('#clock').textContent = st.clock;
+      $('#dayLbl').textContent = st.day === 'stress' ? 'Stress-day simulation' : 'Simulation';
+      const e = st.emergency;
+      $('#emergency').classList.toggle('on', !!e);
+      $('#emergency').textContent = e ? `⚠ ${e.gate === 'G1' ? 'MAIN GATE' : 'EAST GATE'}: ${e.message.toUpperCase()}` : '';
+      const r = st.recommendation;
+      const avoid = e && r && r.gate === e.gate; // never send drivers into an emergency lane
+      const alt = avoid ? st.gates.find((g) => g.id !== e.gate && g.id !== 'G3' && !g.closed) : null;
+      const gate = alt ? { gate: alt.id, name: alt.name, waitMin: alt.waitMin ?? 0 } : r;
+      $('#recoGate').textContent = gate ? gate.name.toUpperCase() : 'GATES CLOSED';
+      $('#arrow').textContent = gate ? ARROW[gate.gate] || '↑' : '⛔';
+      $('#recoWait').textContent = gate ? (gate.waitMin < 1 ? 'No wait' : `About ${Math.ceil(gate.waitMin)} min wait`) : 'Follow guard instructions';
+      $('#gates').innerHTML = st.gates.map((g) => {
+        const hold = st.crossingHold?.[g.id] > 0;
+        const w = g.waitMin ?? 0;
+        const [label, cls] = g.closed ? ['CLOSED', 'bad'] : hold ? ['HOLD: CROSSING', 'warn'] : w > 3 ? [`${Math.ceil(w)} MIN WAIT`, 'bad'] : w >= 1 ? [`${Math.ceil(w)} MIN WAIT`, 'warn'] : ['OPEN, NO WAIT', 'ok'];
+        const lane = st.marshal?.active && g.id === 'G1' ? ' · extra lane open' : '';
+        return `<div class="g"><div class="name">${esc(g.name)}${g.id === 'G3' ? ' (buses)' : ''}</div><div class="state ${cls}">${label}</div><div class="sub">${g.closed ? 'Use another gate' : `${g.queue} vehicle${g.queue === 1 ? '' : 's'} waiting${lane}`}</div></div>`;
+      }).join('');
+      const hold = st.crossingHold?.G1 > 0;
+      $('#walk').innerHTML = hold ? '<span class="ok">🚶 WALK NOW</span>' : '<span class="warn">✋ WAIT FOR SIGNAL</span>';
+    }
+    function renderLive(s) {
+      const free = (t) => s.zones.filter((z) => z.type === t && z.id !== 'ZCP').reduce((a, z) => a + Math.max(0, z.capacity - z.occupied - z.reserved), 0);
+      $('#free2').textContent = free('2W'); $('#free4').textContent = free('4W');
+    }
+    api('/api/sim').then(renderSim); api('/api/stats').then(renderLive);
+    stream({ sim: renderSim, live: renderLive });
+  </script>
+</body>
+</html>

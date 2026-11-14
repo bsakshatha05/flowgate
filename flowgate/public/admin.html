@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FlowGate Control Room</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <main class="wrap">
+    <div class="row" style="margin-bottom:8px">
+      <div class="tabs" style="margin:0">
+        <button class="tab active" data-tab="live">Live Ops</button>
+        <button class="tab" data-tab="sim">Peak-Hour Simulation</button>
+        <button class="tab" data-tab="opt">Slot Optimizer</button>
+      </div>
+      <div class="auto row small muted" style="gap:6px">
+        Demo clock <input id="demoTime" class="mono" style="width:80px" placeholder="live" />
+        <button class="btn sm secondary auto" id="resetDemo">Reset demo data</button>
+      </div>
+    </div>
+
+    <!-- LIVE OPS -->
+    <section id="tab-live" class="grid">
+      <!-- One line that answers "is anything wrong right now?" plus the one urgent action. -->
+      <div class="statusbar" id="statusbar">
+        <div class="st-main"><span class="st-dot" id="stDot"></span><b id="stText">Loading</b></div>
+        <div class="st-stats" id="stStats"></div>
+        <div class="st-act">
+          <button class="btn sm bad" id="emBtn">Emergency lane at Main Gate</button>
+          <a class="btn sm secondary" href="/sign" target="_blank">Gate display</a>
+        </div>
+      </div>
+      <p class="small muted" id="emText" style="margin:-6px 0 0">Shows a keep-clear warning on the gate display.</p>
+
+      <div class="grid g3" id="gateCards"></div>
+
+      <div class="grid g3">
+        <div class="card span2 map">
+          <div class="card-head"><h2>Campus map</h2>
+            <div class="legend"><span><i style="background:var(--ok)"></i>&lt;60%</span><span><i style="background:var(--warn)"></i>60 to 85%</span><span><i style="background:var(--bad)"></i>&gt;85%</span></div></div>
+          <div id="liveMap"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Recent entries</h2><span class="pill" id="feedSrc">QR + camera</span></div>
+          <ul class="feed" id="events"></ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>Parking</h2><span class="muted small">gate counts + app check-ins</span></div>
+        <div class="grid g3" id="zoneBars"></div>
+      </div>
+
+      <details class="panel">
+        <summary>Ask the copilot<span class="sum-right" id="aiMode">checking...</span></summary>
+        <div class="panel-body">
+          <form class="row" id="askForm">
+            <input id="askInput" placeholder="e.g. Which gate should I send a marshal to?" autocomplete="off" />
+            <button class="btn auto">Ask</button>
+            <button class="btn secondary auto" type="button" id="reportBtn">Shift report</button>
+          </form>
+          <div class="row small" style="gap:6px;margin-top:8px" id="askChips"></div>
+          <div id="askOut" class="small" style="white-space:pre-wrap;margin-top:12px"></div>
+        </div>
+      </details>
+      <details class="panel">
+        <summary>Green credits by department<span class="sum-right">monthly report</span></summary>
+        <div class="panel-body"><table><tbody id="leaders"></tbody></table></div>
+      </details>
+    </section>
+
+    <!-- SIMULATION -->
+    <section id="tab-sim" class="grid hidden">
+      <div class="card">
+        <!-- One row, one control style. Every group is a label above a segmented
+             control, sitting on a shared baseline, with the transport buttons last. -->
+        <div class="simbar">
+          <div class="simbar-item">
+            <span class="lbl">Simulated clock</span>
+            <div class="slot-big mono" id="simClock">07:40</div>
+          </div>
+          <div class="simbar-item">
+            <span class="lbl">Day</span>
+            <div class="seg" id="day" role="radiogroup" aria-label="Day">
+              <button type="button" role="radio" aria-checked="true" data-day="normal" class="on">Normal</button>
+              <button type="button" role="radio" aria-checked="false" data-day="stress">Stress</button>
+            </div>
+          </div>
+          <div class="simbar-item">
+            <span class="lbl">Scenario</span>
+            <div class="seg" role="radiogroup" aria-label="Scenario">
+              <button type="button" role="radio" aria-checked="true" data-scn="baseline" class="on">Today</button>
+              <button type="button" role="radio" aria-checked="false" data-scn="flowgate">FlowGate</button>
+              <button type="button" role="radio" aria-checked="false" data-scn="predictive">+ Predict</button>
+            </div>
+          </div>
+          <div class="simbar-item">
+            <span class="lbl">Speed</span>
+            <div class="seg" id="speed" role="radiogroup" aria-label="Speed">
+              <button type="button" role="radio" aria-checked="false" data-speed="2">2&times;</button>
+              <button type="button" role="radio" aria-checked="true" data-speed="5" class="on">5&times;</button>
+              <button type="button" role="radio" aria-checked="false" data-speed="10">10&times;</button>
+            </div>
+          </div>
+          <div class="simbar-item simbar-end">
+            <span class="lbl">&nbsp;</span>
+            <div class="row" style="gap:8px">
+              <button class="btn ok auto" id="simStart">&#9654; Run</button>
+              <button class="btn secondary auto" id="simPause">Pause</button>
+              <button class="btn secondary auto" id="simReset">Reset</button>
+            </div>
+          </div>
+        </div>
+        <p class="small muted" id="dayHint" style="margin:12px 2px 0">A dry morning, 80% keeping their slot.</p>
+        <div class="bar" style="margin-top:12px"><div id="simProg" style="width:0"></div></div>
+      </div>
+      <div class="grid g4" id="simKpis"></div>
+      <div class="card" id="forecastCard">
+        <div class="card-head"><h2>Forecast: next 20 minutes</h2><span class="pill" id="marshalPill">Marshal on standby</span></div>
+        <div class="grid g3">
+          <div class="span2"><div class="chart-box" style="height:180px"><canvas id="fcChart"></canvas></div></div>
+          <div><p class="small muted" id="fcText" style="margin-top:0">Choose <b>FlowGate + Predict</b> and run. The controller forecasts gate queues from bookings and known incidents, then acts before the queue forms.</p>
+            <p class="small muted" id="dayText"></p></div>
+        </div>
+      </div>
+      <div class="grid g3">
+        <div class="card span2 map">
+          <div class="card-head"><h2>Gate queues &amp; parking fill</h2>
+            <button class="btn sm teal" id="crossing">🚶 Open pedestrian crossing at Main Gate (2 min)</button></div>
+          <div id="simMap"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Alerts</h2><span class="pill" id="alertCount">0</span></div>
+          <ul class="feed" id="alerts"></ul>
+        </div>
+      </div>
+      <div class="grid g2">
+        <div class="card"><h2>Arrivals vs gate queues (this run)</h2><div class="chart-box"><canvas id="simChart"></canvas></div></div>
+        <div class="card"><h2>Main Gate queue: three scenarios</h2><div class="chart-box"><canvas id="cmpChart"></canvas></div>
+          <p class="muted small" id="cmpNote"></p></div>
+      </div>
+    </section>
+
+    <!-- OPTIMIZER -->
+    <section id="tab-opt" class="grid hidden">
+      <div class="grid g3">
+        <div class="card">
+          <h2>Inputs</h2>
+          <div class="grid g3" style="gap:8px">
+            <div><label for="pWin">Slot (min)</label><input id="pWin" type="number" value="10" min="5" max="30" /></div>
+            <div><label for="pBuf">Buffer (min)</label><input id="pBuf" type="number" value="10" min="0" max="30" /></div>
+            <div><label for="pEarly">Earliest</label><input id="pEarly" value="07:50" class="mono" /></div>
+          </div>
+          <div class="card-head" style="margin-top:14px">
+            <h3 style="font-size:.95rem;margin:0">Timetable</h3>
+            <span class="pill" id="cohortCount"></span>
+          </div>
+          <div class="fixed-table">
+            <table>
+              <thead><tr><th>Class</th><th>Students</th><th>First</th><th>Last</th></tr></thead>
+              <tbody id="cohortTbl"></tbody>
+            </table>
+          </div>
+          <details class="more" style="margin-top:8px">
+            <summary>Replace the timetable<span class="sum-right">CSV</span></summary>
+            <div class="more-body">
+              <p class="small muted" style="margin:0 0 8px">
+                One row per class: <code>cohort,dept,year,students,firstClass,lastClass</code>.
+                Upload a file or edit below, then run the optimizer.</p>
+              <input type="file" id="csvFile" accept=".csv,text/csv" />
+              <textarea id="csv" rows="8" style="margin-top:8px"></textarea>
+            </div>
+          </details>
+          <div class="btn-row">
+            <button class="btn" id="runOpt">Run optimizer</button>
+            <button class="btn ok" id="applyOpt">Apply these slots</button>
+          </div>
+        </div>
+        <div class="card span2">
+          <div class="card-head"><h2>Vehicles arriving per minute</h2><div id="optSummary" class="row" style="gap:6px;flex:0 0 auto"></div></div>
+          <p class="small muted" style="margin:0 0 8px">Engineering classes only, because they are the ones FlowGate can move. The school, the PU college and the degree college have fixed bells and are counted separately in the simulation, where the campus-wide peak is about 53 a minute.</p>
+          <div class="chart-box" style="height:300px"><canvas id="optChart"></canvas></div>
+        </div>
+      </div>
+      <div class="grid g2">
+        <div class="card"><h2>Entry slots</h2><div class="fixed-table" style="height:320px;margin-top:10px"><table><thead><tr><th>Slot</th><th>Cohort</th><th>Vehicles</th></tr></thead><tbody id="entryTbl"></tbody></table></div></div>
+        <div class="card"><h2>Suggested exit (dismissal) slots</h2><div class="fixed-table" style="height:320px;margin-top:10px"><table><thead><tr><th>Slot</th><th>Cohort</th><th>Vehicles</th></tr></thead><tbody id="exitTbl"></tbody></table></div></div>
+      </div>
+    </section>
+  </main>
+  <script src="/lib/chart.umd.js"></script>
+  <script src="/js/common.js"></script>
+  <script src="/js/map.js"></script>
+  <script src="/js/admin.js"></script>
+</body>
+</html>
