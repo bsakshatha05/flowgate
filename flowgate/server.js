@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const store = require('./src/db');
-const { GATES, ZONES, COHORTS, CAMPUS, DEPARTMENTS, ALL_DEPARTMENTS, TEACH_OUT_DEPARTMENTS, AREAS, INSTITUTIONS } = require('./src/config');
+const { GATES, ZONES, COHORTS, CAMPUS, DEPARTMENTS, ALL_DEPARTMENTS, TEACH_OUT_DEPARTMENTS, DEPARTMENT_NAMES, AREAS, INSTITUTIONS } = require('./src/config');
 const { runOptimizer } = require('./src/optimizer');
 const { Simulator, compare, COMPLIANCE, DAYS } = require('./src/simulator');
 const copilot = require('./src/copilot');
@@ -91,7 +91,7 @@ function serveStatic(req, res, pathname) {
 
 // ---------- routes ----------
 const routes = {
-  'GET /api/config': () => ({ campus: CAMPUS, gates: GATES, zones: ZONES, compliance: COMPLIANCE, depts: ALL_DEPARTMENTS, teachOut: TEACH_OUT_DEPARTMENTS, areas: AREAS, demoTime: store.getSetting('demoTime'),
+  'GET /api/config': () => ({ campus: CAMPUS, gates: GATES, zones: ZONES, compliance: COMPLIANCE, depts: ALL_DEPARTMENTS, teachOut: TEACH_OUT_DEPARTMENTS, deptNames: DEPARTMENT_NAMES, areas: AREAS, demoTime: store.getSetting('demoTime'),
     institutions: INSTITUTIONS.map((i) => ({ id: i.id, name: i.name, arrive: i.arrive, kind: i.kind })) }),
   'POST /api/admin/demo-time': (q, b) => { store.setSetting('demoTime', /^\d{2}:\d{2}$/.test(b.time || '') ? b.time : null); store.syncClock(); return { demoTime: store.getSetting('demoTime') }; },
   'GET /api/users': () => store.users(),

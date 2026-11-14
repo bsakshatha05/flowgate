@@ -53,6 +53,23 @@ const DEPARTMENTS = ['CSE', 'ECE', 'EEE', 'ME', 'CV', 'AIML', 'CSD', 'CY'];
 // are on campus every morning until they graduate. So they can be added as real
 // people, even though they add no new cohort to the model.
 const TEACH_OUT_DEPARTMENTS = ['ISE', 'EIE', 'AIDS'];
+
+// The short codes are what USNs and cohort ids are built from, so they stay. These
+// are what a human should actually read. AIDS in particular is a terrible thing to
+// put in a dropdown; the programme is AI and Data Science.
+const DEPARTMENT_NAMES = {
+  CSE: 'Computer Science',
+  ECE: 'Electronics & Communication',
+  EEE: 'Electrical & Electronics',
+  ME: 'Mechanical',
+  CV: 'Civil',
+  AIML: 'CSE (AI & Machine Learning)',
+  CSD: 'CSE (Data Science)',
+  CY: 'CSE (Cyber Security)',
+  ISE: 'Information Science',
+  EIE: 'Electronics & Instrumentation',
+  AIDS: 'AI & Data Science',
+};
 const ALL_DEPARTMENTS = [...DEPARTMENTS, ...TEACH_OUT_DEPARTMENTS];
 
 // Cohorts = department + year, with first class start and last class end.
@@ -203,6 +220,6 @@ const AREAS = [
 ];
 
 module.exports = {
-  CAMPUS, GATES, LANE_SPLIT, ZONES, DEPARTMENTS, TEACH_OUT_DEPARTMENTS, ALL_DEPARTMENTS, COHORTS, MODE_SHARE, FACULTY, BUS_FLEET, SEATS_PER_BUS, AREAS,
+  CAMPUS, GATES, LANE_SPLIT, ZONES, DEPARTMENTS, TEACH_OUT_DEPARTMENTS, ALL_DEPARTMENTS, DEPARTMENT_NAMES, COHORTS, MODE_SHARE, FACULTY, BUS_FLEET, SEATS_PER_BUS, AREAS,
   ARRIVAL_SPREAD_MIN, DAILY_ATTENDANCE, INSTITUTIONS, DROPOFF_GATE_COST,
 };

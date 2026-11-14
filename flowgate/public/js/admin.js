@@ -351,9 +351,12 @@ $('#pVehicle')?.addEventListener('click', (e) => {
 });
 
 function fillPersonOptions() {
-  // Teach-out branches are marked, so nobody wonders why they take no new intake.
+  // Show the programme a person would recognise, not the internal code. Teach-out
+  // branches are marked so nobody wonders why they take no new intake.
   const out = CFG.teachOut || [];
-  $('#pDept').innerHTML = (CFG.depts || []).map((d) => `<option value="${d}">${d}${out.includes(d) ? ' (final years only)' : ''}</option>`).join('');
+  const dn = CFG.deptNames || {};
+  $('#pDept').innerHTML = (CFG.depts || []).map((d) =>
+    `<option value="${d}">${esc(dn[d] || d)}${out.includes(d) ? ' · final years only' : ''}</option>`).join('');
   $('#pArea').innerHTML = (CFG.areas || []).map((a) => `<option>${a}</option>`).join('');
   $('#pInst').innerHTML = (CFG.institutions || []).map((i) => `<option value="${i.id}">${esc(i.name)}</option>`).join('');
   syncPersonForm();
@@ -378,7 +381,8 @@ $('#pInst')?.addEventListener('change', syncPersonForm);
 function personWhere(p) {
   const inst = (CFG.institutions || []).find((i) => i.id === p.institution);
   if (p.institution && p.institution !== 'RNSIT') return inst ? inst.name : p.institution;
-  return p.role === 'faculty' ? `Faculty · ${p.dept}` : `${p.dept} Y${p.year}`;
+  const name = (CFG.deptNames || {})[p.dept] || p.dept;
+  return p.role === 'faculty' ? `Faculty · ${name}` : `${name} · Y${p.year}`;
 }
 
 async function loadPeople() {

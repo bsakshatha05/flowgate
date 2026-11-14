@@ -6,7 +6,10 @@ const VEH = { '2W': 'Two-wheeler', '4W': 'Car', NONE: 'No vehicle' };
 async function init() {
   const users = await api('/api/users');
   const sel = $('#who');
-  sel.innerHTML = users.map((u) => `<option value="${u.id}">${esc(u.name)} · ${u.role === 'faculty' ? 'Faculty' : `${u.dept} Y${u.year}`} · ${VEH[u.vehicle]}</option>`).join('');
+  // Branch codes are how students refer to themselves, so they stay short here.
+  // AIDS is the exception: nobody should read that word in a list of people.
+  const deptLabel = (d) => (d === 'AIDS' ? 'AI&DS' : d);
+  sel.innerHTML = users.map((u) => `<option value="${u.id}">${esc(u.name)} · ${u.role === 'faculty' ? 'Faculty' : `${deptLabel(u.dept)} Y${u.year}`} · ${VEH[u.vehicle]}</option>`).join('');
   let saved = null; try { saved = localStorage.getItem('fg-user'); } catch {}
   userId = Number(saved && users.some((u) => u.id === Number(saved)) ? saved : users.find((u) => u.vehicle === '2W' && u.role === 'student').id);
   sel.value = userId;
